@@ -1,0 +1,262 @@
+/* src/components/auth/Register.css */
+
+/* Reset básico para todos os elementos */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Contêiner principal da página de registro */
+.register-container {
+    background: transparent;
+    border-radius: 0;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: none;
+    backdrop-filter: none;
+    border: none;
+    position: relative;
+    z-index: 1;
+    animation: fadeIn 0.6s ease-out; /* Animação de fade-in */
+    margin: 0 auto; /* Centraliza o contêiner horizontalmente */
+}
+
+/* Seção do logo */
+.logo-section {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.logo-icon {
+    width: 80px;
+    height: 80px;
+    background: transparent;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon svg {
+    width: 80px;
+    height: 80px;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: #4ade80;
+}
+
+/* Título da página de registro */
+.register-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 8px;
+}
+
+/* Subtítulo da página de registro */
+.register-subtitle {
+    color: white;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+/* Link de login */
+.login-link {
+    color: #4ade80;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.login-link:hover {
+    color: #22c55e;
+}
+
+/* Grupos de formulário */
+.form-group {
+    margin-bottom: 20px;
+}
+
+/* Inputs de formulário (geral) */
+.form-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4ade80;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+.form-input::placeholder {
+    color: white;
+    opacity: 0.7;
+}
+
+/* Contêiner de senha com toggle */
+.password-container {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(156, 163, 175, 0.6);
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    opacity: 0.6;
+}
+
+.password-toggle:hover {
+    color: rgba(74, 222, 128, 0.8);
+    opacity: 0.8;
+}
+
+/* Select de formulário (específico para registro) */
+.form-select {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7); /* Cor inicial para o placeholder */
+    font-size: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    /* Remover a seta padrão do select para um controle mais limpo */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M4.5%204.5L6%206L7.5%204.5L9%206L6%209L3%206L4.5%204.5Z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 12px;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: #4ade80;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+.form-select option {
+    background: #275736;
+    color: white;
+}
+
+/* Botão de registro */
+.register-button {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    border: none;
+    border-radius: 8px;
+    color: #275736;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.register-button:hover {
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+}
+
+.register-button:active {
+    transform: translateY(0);
+}
+
+/* Seção de conclusão (informações adicionais) */
+.completion-section {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.completion-title {
+    color: white;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.completion-steps { /* Itens dos passos de conclusão */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-size: 13px;
+}
+
+.step-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilo para a mensagem de registro (sucesso/erro) */
+.register-message {
+    color: #fff; /* Cor do texto da mensagem */
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 0.9em;
+}
+
+/* Media query para telas menores */
+@media (max-width: 480px) {
+    .register-container {
+        padding: 30px 20px;
+    }
+}
+
+/* Animações (gerais) */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,726 @@
+/* src/components/pages/Profile.css */
+
+/* --- Conteúdo Principal --- */
+.main-content {
+    margin-bottom: 100px;
+    padding: 20px 0;
+    max-width: 550px;
+    margin-right: auto;
+    margin-left: auto;
+    width: 100%;
+    overflow-y: auto;
+    min-height: calc(100vh - 120px); /* ADICIONADO: garante altura mínima */
+    height: auto; /* ADICIONADO: permite altura dinâmica */
+}
+
+/* --- Cabeçalho do Perfil --- */
+.profile-header {
+    background-color: var(--post-bg);
+    border-radius: 15px;
+    padding: 30px 20px;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    margin-right: 20px;
+    border: 1px solid var(--post-border);
+    color: var(--post-text-color);
+    text-align: center;
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: var(--avatar-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color-main);
+    font-size: 48px;
+    font-weight: bold;
+    margin: 0 auto 20px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.edit-avatar {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: var(--avatar-bg);
+    color: var(--text-color-main);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.profile-name {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--trend-section-title);
+    transition: color 0.3s;
+}
+
+.profile-handle {
+    color: var(--secondary-text-color);
+    margin-bottom: 15px;
+    transition: color 0.3s;
+}
+
+.profile-bio {
+    color: var(--secondary-text-color);
+    line-height: 1.5;
+    margin-bottom: 20px;
+    transition: color 0.3s;
+}
+
+/* ADICIONADO: Estilos para localização e website */
+.profile-location,
+.profile-website {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-text-color);
+    font-size: 14px;
+    margin-bottom: 10px;
+    transition: color 0.3s;
+}
+
+.profile-website a {
+    color: var(--hashtag-color);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.profile-website a:hover {
+    text-decoration: underline;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--trend-section-title);
+    transition: color 0.3s;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    transition: color 0.3s;
+}
+
+.edit-profile-btn {
+    background-color: var(--follow-btn-bg);
+    color: var(--text-color-main);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.3s;
+}
+
+.edit-profile-btn:hover {
+    background-color: #1e4329;
+}
+
+/* --- MODAL DE EDIÇÃO --- */
+.edit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+    overflow-y: auto; /* ADICIONADO: permite rolagem no modal */
+}
+
+.edit-modal {
+    background-color: var(--post-bg);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh; /* ADICIONADO: limita altura do modal */
+    overflow-y: auto; /* ADICIONADO: permite rolagem interna */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s;
+    margin: auto; /* ADICIONADO: centraliza o modal */
+}
+
+.edit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--post-border);
+    position: sticky; /* ADICIONADO: mantém header fixo */
+    top: 0;
+    background-color: var(--post-bg);
+    border-radius: 15px 15px 0 0;
+    z-index: 1;
+}
+
+.edit-modal-header h2 {
+    color: var(--trend-section-title);
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0;
+    transition: color 0.3s;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.3s;
+}
+
+.modal-close-btn:hover {
+    background-color: var(--input-bg);
+    color: var(--post-text-color);
+}
+
+.edit-modal-content {
+    padding: 20px;
+    max-height: calc(90vh - 140px); /* ADICIONADO: limita altura do conteúdo */
+    overflow-y: auto; /* ADICIONADO: permite rolagem */
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: var(--post-text-color);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--post-border);
+    border-radius: 10px;
+    background-color: var(--input-bg);
+    color: #333333; /* ALTERADO: texto preto no tema claro */
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+    box-sizing: border-box;
+}
+
+/* ADICIONADO: Placeholder preto no tema claro */
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #666666; /* Cinza escuro para placeholder no tema claro */
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--follow-btn-bg);
+    box-shadow: 0 0 0 2px rgba(39, 87, 54, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.char-count {
+    text-align: right;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 5px;
+    transition: color 0.3s;
+}
+
+.edit-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding: 20px;
+    border-top: 1px solid var(--post-border);
+    position: sticky; /* ADICIONADO: mantém footer fixo */
+    bottom: 0;
+    background-color: var(--post-bg);
+    border-radius: 0 0 15px 15px;
+}
+
+.cancel-btn,
+.save-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+.cancel-btn {
+    background-color: var(--input-bg);
+    color: var(--secondary-text-color);
+    border: 1px solid var(--post-border);
+}
+
+.cancel-btn:hover {
+    background-color: var(--secondary-text-color);
+    color: white;
+}
+
+.save-btn {
+    background-color: var(--follow-btn-bg);
+    color: var(--text-color-main);
+}
+
+.save-btn:hover {
+    background-color: #1e4329;
+}
+
+/* --- Seções de Perfil (Atividade, Configurações) --- */
+.profile-section {
+    background-color: var(--post-bg);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    margin-right: 20px;
+    border: 1px solid var(--post-border);
+    color: var(--post-text-color);
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    height: auto; /* ADICIONADO: permite altura dinâmica */
+    overflow: visible; /* ADICIONADO: garante visibilidade */
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: var(--trend-section-title);
+    transition: color 0.3s;
+}
+
+/* --- Atividade Recente --- */
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--post-border);
+    transition: border-color 0.3s;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--avatar-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color-main);
+    margin-right: 15px;
+    font-size: 16px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-text {
+    margin-bottom: 5px;
+    color: var(--post-text-color);
+    transition: color 0.3s;
+}
+
+.activity-time {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    transition: color 0.3s;
+}
+
+/* --- Configurações --- */
+.settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--post-border);
+    transition: border-color 0.3s;
+}
+
+.settings-item:last-child {
+    border-bottom: none;
+}
+
+.setting-label {
+    font-weight: 500;
+    color: var(--post-text-color);
+    transition: color 0.3s;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 24px;
+    background-color: var(--secondary-text-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.toggle-switch.active {
+    background-color: var(--follow-btn-bg);
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: var(--text-color-main);
+    border-radius: 50%;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+.toggle-switch.active .toggle-slider {
+    transform: translateX(26px);
+}
+
+/* --- Abas de Navegação (Atividade/Configurações) --- */
+.tab-container {
+    display: flex;
+    background-color: var(--post-bg);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    margin-right: 20px;
+    overflow: hidden;
+    border: 1px solid var(--post-border);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: 2px solid transparent;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.tab-btn.active {
+    background-color: var(--follow-btn-bg);
+    color: var(--text-color-main);
+    border: 2px solid var(--secondary-text-color);
+}
+
+/* --- Regras para mostrar/ocultar o conteúdo das abas --- */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease-out;
+    height: auto; /* ADICIONADO: permite altura dinâmica */
+    overflow: visible; /* ADICIONADO: garante visibilidade */
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* --- Botão de Sair da Conta --- */
+.logout-btn {
+    width: 100%;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+}
+
+/* --- Estilo para o toast de confirmação de logout --- */
+.custom-toast-confirm {
+    background-color: var(--post-bg);
+    color: var(--post-text-color);
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.custom-toast-confirm p {
+    margin: 0;
+    font-size: 16px;
+    text-align: center;
+}
+
+.custom-toast-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.custom-toast-buttons button {
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    border: none;
+    transition: background-color 0.2s;
+}
+
+.custom-toast-buttons button:first-child {
+    background-color: #dc3545;
+    color: white;
+}
+
+.custom-toast-buttons button:first-child:hover {
+    background-color: #c82333;
+}
+
+.custom-toast-buttons button:last-child {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--post-border);
+    transition: background-color 0.2s, color 0.2s, border-color 0.3s;
+}
+
+.custom-toast-buttons button:last-child:hover {
+    background-color: var(--secondary-text-color);
+    color: white;
+}
+
+/* --- Media Queries (Responsividade) --- */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 15px 0;
+        min-height: calc(100vh - 100px); /* ADICIONADO: altura mínima mobile */
+    }
+
+    .profile-header,
+    .profile-section,
+    .tab-container {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .profile-header {
+        padding: 20px 15px;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+    }
+
+    .profile-name {
+        font-size: 20px;
+    }
+
+    .profile-handle {
+        font-size: 14px;
+    }
+
+    .profile-bio {
+        font-size: 14px;
+    }
+
+    .tab-btn {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .section-title {
+        font-size: 16px;
+    }
+
+    .activity-item, .settings-item {
+        padding: 10px 0;
+    }
+
+    /* ADICIONADO: Responsividade do modal */
+    .edit-modal-overlay {
+        padding: 10px;
+        align-items: flex-start; /* Alinha no topo em mobile */
+        padding-top: 20px;
+    }
+
+    .edit-modal {
+        max-width: 100%;
+        max-height: calc(100vh - 40px);
+        margin: 0;
+    }
+
+    .edit-modal-content {
+        padding: 15px;
+        max-height: calc(100vh - 160px);
+    }
+
+    .edit-modal-header,
+    .edit-modal-footer {
+        padding: 15px;
+    }
+
+    .form-input,
+    .form-textarea {
+        padding: 10px 12px;
+        font-size: 16px; /* Evita zoom no iOS */
+    }
+
+    .cancel-btn,
+    .save-btn {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .edit-modal-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .cancel-btn,
+    .save-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .profile-stats {
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .stat-item {
+        min-width: 80px;
+    }
+}
+
+/* ADICIONADO: Classes utilitárias para rolagem */
+.scrollable-content {
+    max-height: none !important;
+    overflow: visible !important;
+    height: auto !important;
+}
+
+.full-height {
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* ADICIONADO: Para debugging */
+.debug-height {
+    border: 2px dashed red;
+    min-height: 150vh !important;
+}
+
+/* Animação para fade-in */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* ADICIONADO: Garantir que o modal funcione corretamente com o tema escuro */
+body[data-theme="dark"] .edit-modal {
+    background-color: var(--post-bg);
+    border: 1px solid var(--post-border);
+}
+
+body[data-theme="dark"] .edit-modal-header,
+body[data-theme="dark"] .edit-modal-footer {
+    background-color: var(--post-bg);
+    border-color: var(--post-border);
+}
+
+/* ATUALIZADO: Cores específicas para tema escuro */
+body[data-theme="dark"] .form-input,
+body[data-theme="dark"] .form-textarea {
+    background-color: var(--input-bg);
+    color: #ffffff; /* Texto branco no tema escuro */
+    border-color: var(--post-border);
+}
+
+body[data-theme="dark"] .form-input::placeholder,
+body[data-theme="dark"] .form-textarea::placeholder {
+    color: #aaaaaa; /* Placeholder cinza claro no tema escuro */
+}
+
+/* ADICIONADO: Garantir cores corretas no tema claro */
+body:not([data-theme="dark"]) .form-input,
+body:not([data-theme="dark"]) .form-textarea {
+    color: #333333 !important; /* Força texto preto no tema claro */
+}
+
+body:not([data-theme="dark"]) .form-input::placeholder,
+body:not([data-theme="dark"]) .form-textarea::placeholder {
+    color: #666666 !important; /* Força placeholder cinza escuro no tema claro */
+}

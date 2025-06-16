@@ -1,0 +1,59 @@
+/* src/index.css */
+
+/* Garante que html, body e o elemento raiz do React (#root) ocupem 100% da altura da viewport */
+html, body, #root {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    height: 100%; /* Essencial para centralização vertical e rolagem */
+    width: 100%; /* Garante que ocupem 100% da largura */
+}
+
+/* Estilos para o body que agora lidam apenas com o fundo e a fonte */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-color-main); /* ALTERADO: Usa variável CSS em vez de cor fixa */
+    min-height: 100vh; /* Garante que o body tenha pelo menos a altura da viewport */
+    position: relative; /* Necessário para o pseudo-elemento ::before */
+    overflow-x: hidden; /* Evita rolagem horizontal indesejada */
+    transition: background-color 0.3s ease; /* ADICIONADO: Transição suave */
+}
+
+/* ALTERADO: O pseudo-elemento para o padrão de fundo APENAS no tema claro */
+body:not([data-theme="dark"])::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Seu SVG de fundo convertido para base64 */
+    background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjUwMCIgaGVpZ2h0PSI1MDAiPgo8cGF0aCBkPSJNMCAwIEMxNjUgMCAzMzAgMCA1MDAgMCBDNTAwIDE2NSAwIDMzMCA1MDAgNTAwIEMzMzUgNTAwIDE3MCA1MDAgMCA1MDAgQzAgMzM1IDAgMTcwIDAgMCBaIiBmaWxsPSIjMjc1NzM2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLDApIi8+CjxwYXRoIGQ9Ik0wIDAgQy0wLjI4ODc1IDEuMjU4MTI1IC0wLjU3NzUgMi41MTYyNSAtMC44NzUgMy44MTI1IEMtMS4yNTE1Mjk4NCA1LjU0MTMzNDE4IC0xLjYyNjQ1NzMgNy4yNzA1MTc5NCAtMiA5IEMtMi4xNzg0NTQ1OSA5Ljc3NzA2Mjk5IC0yLjM1NjkwOTE4IDEwLjU1NDEyNTk4IC0yLjU0MDc3MTQ4IDExLjM1NDczNjMzIEMtNC4xMDM2MDc5IDE4LjgzMTQ0NTk2IC00LjI3NDU1NzA4IDI2LjE3OTA1Mjg5IC00LjIwNTgxMDU1IDMzLjc4NzU5NzY2IEMtNC4xODc1ODc0MSAzNS44NjUwMzUxOSAtNC4xODUzMDE2IDM3Ljk0MjAyMjAzIC00LjE4NTU0Njg4IDQwLjAxOTUzMTI1IEMtNC4xNjk0ODc4OCA0Ni4wMzc1MzkxMiAtNC4wNTIyOTU4IDUyLjAxMzAyMDA0IC0zLjUxNTYyNSA1OC4wMTE3MTg3NSBDLTYuNzMzODkyOTYgNjcuMjI3Nzc4NTkgLTIuNjY0MzM4NjcgNzYuNDYzMTE4MDUgLTIuNTk0OTcwNyA4NS43MDcyNzUzOSBDLTIuNTczNDgzODggODcuODQ0ODEwNDYgLTIuNTM5NDkzMzIgODkuOTgyMjU5ODEgLTIuNDkyNDMxNjQgOTIuMTE5Mzg0NzcgQy0xLjg1MTM5OTMzIDEyMS42ODIxNTIyOCAtMTAuNDc0Mzc3NCAxNDkuMzk5NDc2MiAtMzAgMTcyIEMtMzAuOTIwMzkwNjIgMTczLjEzNjk1MzEyIC0zMC45MjAzOTAyIDE3My4xMzY5NTMxMiAtMzEuODU5Mzc1IDE3NC4yOTY4NzUgQy0zNy4xMzk3ODc1MiAxODAuNjI0NjQyMDcgLTQzLjI1OTMwMzY2IDE4NS4zMDQwMzkzMSAtNTAgMTkwIEMtNTUuMSIvPgo8L3N2Zz4=');
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    opacity: 0.05;
+    z-index: -1;
+}
+
+/* ADICIONADO: Remove qualquer pseudo-elemento no tema escuro */
+body[data-theme="dark"]::before {
+    display: none !important;
+}
+
+/* ADICIONADO: Garante fundo preto sólido no tema escuro */
+body[data-theme="dark"] {
+    background-color: #000000 !important;
+    background-image: none !important;
+}
+
+/* O .app agora é um flex container que se expande para preencher a altura */
+.app {
+    width: 100%; /* Ocupa a largura total para o layout flex */
+    background: transparent; /* ADICIONADO: Deixa transparente para mostrar o fundo do body */
+    min-height: 100vh; /* ADICIONADO: Garante altura mínima */
+}
+
+/* ADICIONADO: Força .app a ter fundo preto no tema escuro */
+body[data-theme="dark"] .app {
+    background-color: #000000 !important;
+}

@@ -1,0 +1,230 @@
+/* src/components/auth/auth.css */
+
+/* Reset básico para todos os elementos */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Seletor genérico para os contêineres principais de autenticação (login e registro) */
+/* ATENÇÃO: As regras de `body` e `body::before` devem estar em `src/index.css` (CSS global) */
+.auth-container { /* Esta classe será aplicada tanto ao .login-container quanto ao .register-container */
+    background: transparent;
+    border-radius: 0;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: none;
+    backdrop-filter: none;
+    border: none;
+    position: relative;
+    z-index: 1;
+    animation: fadeIn 0.6s ease-out; /* Animação de fade-in */
+}
+
+/* Seção do logo compartilhada */
+.logo-section {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.logo-icon {
+    width: 80px;
+    height: 80px;
+    background: transparent;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.logo-icon svg {
+    width: 80px;
+    height: 80px;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: #4ade80;
+}
+
+/* Títulos principais (login e registro) */
+.auth-title { /* Para .login-title e .register-title */
+    font-size: 28px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 8px;
+}
+
+/* Subtítulos (login e registro) */
+.auth-subtitle { /* Para .login-subtitle e .register-subtitle */
+    color: white;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+/* Links de alternância (Inscreva-se / Entrar) */
+.auth-link { /* Para .signup-link e .login-link */
+    color: #4ade80;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.auth-link:hover {
+    color: #22c55e;
+}
+
+/* Grupos de formulário */
+.form-group {
+    margin-bottom: 20px;
+}
+
+/* Inputs de formulário (geral) */
+.form-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4ade80;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+.form-input::placeholder {
+    color: white;
+    opacity: 0.7;
+}
+
+/* Contêiner de senha com toggle */
+.password-container {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(156, 163, 175, 0.6);
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    opacity: 0.6;
+}
+
+.password-toggle:hover {
+    color: rgba(74, 222, 128, 0.8);
+    opacity: 0.8;
+}
+
+/* Botões de autenticação (login e registro) */
+.auth-button { /* Para .login-button e .register-button */
+    width: 100%;
+    padding: 14px;
+    background: white;
+    border: none;
+    border-radius: 8px;
+    color: #275736;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.auth-button:hover {
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+}
+
+.auth-button:active {
+    transform: translateY(0);
+}
+
+/* Seção de informações adicionais (Sobre o EcoSnap / Você completará o perfil depois) */
+.info-section { /* Para .about-section e .completion-section */
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-title { /* Para .about-title e .completion-title */
+    color: white;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.info-items { /* Para .features e .completion-steps */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.info-item { /* Para .feature-item e .step-item */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-size: 13px;
+}
+
+.info-icon { /* Para .feature-icon e .step-icon */
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilos para mensagens (login e registro) */
+.auth-message { /* Para .login-message e .register-message */
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 0.9em;
+}
+
+/* Media query para telas menores */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 30px 20px;
+    }
+}
+
+/* Animações (gerais) */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

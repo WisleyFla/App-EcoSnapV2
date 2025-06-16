@@ -1,0 +1,427 @@
+/* src/components/pages/Home.css */
+
+/* --- Variáveis CSS para Tema --- */
+:root {
+    /* Tema Padrão (Verde) */
+    --bg-color-main: #275736;
+    --text-color-main: #ffffff;
+    --sidebar-bg: #275736;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --post-bg: #f5f5f5;
+    --post-text-color: #333333;
+    --post-border: #ddd;
+    --secondary-text-color: #666;
+    --action-btn-color: #666;
+    --input-bg: #f5f5f5;
+    --input-text: #333333;
+    --input-placeholder: #666;
+    --hashtag-color: #275736;
+    --follow-btn-bg: #275736;
+    --avatar-bg: #275736;
+    --trend-section-title: #275736;
+    --trend-topic-color: #275736;
+}
+
+/* ALTERADO: Tema Escuro usando data-theme em vez de classe dark-theme */
+body[data-theme="dark"] {
+    --bg-color-main: #000000; /* Fundo principal preto */
+    --text-color-main: #ffffff;
+    --sidebar-bg: #000000; /* Sidebar preta */
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --post-bg: #1a1a1a; /* Fundo dos posts mais escuro */
+    --post-text-color: #ffffff;
+    --post-border: #333333; /* Borda mais escura para os posts */
+    --secondary-text-color: #aaaaaa; /* Textos secundários mais claros no escuro */
+    --action-btn-color: #aaaaaa; /* Botões de ação mais claros */
+    --input-bg: #1a1a1a; /* Fundo do input mais escuro */
+    --input-text: #ffffff;
+    --input-placeholder: #aaaaaa;
+    --hashtag-color: #ffffff; /* Hashtags brancas no tema escuro */
+    --follow-btn-bg: #333333; /* Botão seguir mais escuro */
+    --avatar-bg: #333333; /* Avatar mais escuro */
+    --trend-section-title: #ffffff;
+    --trend-topic-color: #ffffff;
+}
+
+/* --- Estilos Globais e Reset --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* --- Sidebar (Navegação Inferior em Mobile) --- */
+.sidebar {
+    width: 100%;
+    background-color: var(--sidebar-bg);
+    padding: 15px 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 80px;
+    overflow: visible;
+    z-index: 1000;
+    border-top: 1px solid var(--sidebar-border);
+    transition: background-color 0.3s ease;
+}
+
+.nav-menu {
+    list-style: none;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-item {
+    margin-bottom: 0;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    color: var(--text-color-main);
+    text-decoration: none;
+    border-radius: 10px;
+    transition: background-color 0.2s, color 0.3s;
+    font-size: 12px;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-icon {
+    margin-right: 0;
+    margin-bottom: 2px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* --- Conteúdo Principal --- */
+.main-content {
+    padding: 20px 0;
+    max-width: 550px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+/* --- Barra de Pesquisa --- */
+.search-bar {
+    background-color: var(--input-bg);
+    border: 1px solid var(--post-border);
+    border-radius: 25px;
+    padding: 12px 20px;
+    margin: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.search-input {
+    background: none;
+    border: none;
+    color: var(--input-text);
+    flex: 1;
+    outline: none;
+    font-size: 16px;
+}
+
+.search-input::placeholder {
+    color: var(--input-placeholder);
+}
+
+.search-icon-bar {
+    color: var(--input-placeholder);
+    width: 18px;
+    height: 18px;
+}
+
+/* --- Posts --- */
+.post {
+    background-color: var(--post-bg);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--post-border);
+    color: var(--post-text-color);
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--avatar-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    margin-right: 10px;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.post-info {
+    flex: 1;
+}
+
+.username {
+    font-weight: bold;
+    margin-bottom: 2px;
+    font-size: 14px;
+}
+
+.handle {
+    color: var(--secondary-text-color);
+    font-size: 12px;
+    transition: color 0.3s;
+}
+
+.post-time {
+    color: var(--secondary-text-color);
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+.post-content {
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.hashtags {
+    color: var(--hashtag-color);
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.location {
+    color: var(--secondary-text-color);
+    font-size: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    transition: color 0.3s;
+}
+
+.location-icon {
+    margin-right: 5px;
+    color: var(--secondary-text-color);
+    transition: color 0.3s;
+}
+
+.post-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.post-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--post-border);
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    color: var(--action-btn-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    transition: color 0.2s;
+}
+
+.action-btn:hover {
+    color: var(--post-text-color);
+}
+
+.action-btn.liked {
+    color: #ff4444;
+}
+
+.action-btn.liked svg {
+    fill: #ff4444;
+    stroke: #ff4444;
+}
+
+/* --- Botão Flutuante --- */
+.floating-buttons {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 1000;
+}
+
+.post-btn {
+    background-color: #ffffff;
+    color: #275736;
+    border: 2px solid #275736;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.post-btn:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.1);
+}
+
+/* --- Seções de Tendências e Pessoas para Seguir --- */
+.trends-container {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 2px;
+}
+
+.trends-section {
+    background-color: var(--post-bg);
+    border-radius: 12px;
+    padding: 15px;
+    color: var(--post-text-color);
+    border: 1px solid var(--post-border);
+    margin-bottom: 0;
+    flex: 1;
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    color: var(--trend-section-title);
+    transition: color 0.3s;
+}
+
+.trend-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--post-border);
+}
+
+.trend-item:last-child {
+    border-bottom: none;
+}
+
+.trend-topic {
+    font-weight: bold;
+    color: var(--trend-topic-color);
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+.trend-count {
+    color: var(--secondary-text-color);
+    font-size: 12px;
+    transition: color 0.3s;
+}
+
+.user-card {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--post-border);
+}
+
+.user-card:last-child {
+    border-bottom: none;
+}
+
+.user-info {
+    flex: 1;
+    margin-left: 0;
+}
+
+.follow-btn {
+    background-color: var(--follow-btn-bg);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.3s;
+}
+
+.follow-btn:hover {
+    background-color: #1e4329;
+}
+
+/* --- Media Queries (Responsividade) --- */
+@media (max-width: 768px) {
+    .trends-container {
+        display: none;
+    }
+    
+    .main-content {
+        padding: 20px 0;
+    }
+
+    .search-bar, .post {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+
+    .mobile-nav-dots {
+        display: none;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-nav-dots {
+        display: none;
+    }
+    
+    .floating-buttons {
+        right: calc(50% - 300px - 10px);
+    }
+}

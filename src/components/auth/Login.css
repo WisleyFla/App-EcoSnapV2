@@ -1,0 +1,230 @@
+/* src/components/auth/Login.css */
+
+/* Container principal da página de login */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-color-main);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Container do formulário centralizado - SEM card/fundo */
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 30px;
+  color: var(--text-color-main); /* ALTERADO: usa cor do texto principal */
+  text-align: center; /* ADICIONADO: centraliza todo o conteúdo */
+}
+
+/* Seção do logo */
+.logo-section {
+  text-align: center;
+  margin-bottom: 40px; /* AUMENTADO: mais espaço */
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px; /* AUMENTADO: mais espaço */
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: bold;
+  margin-left: 10px;
+  color: var(--text-color-main);
+}
+
+.login-title {
+  font-size: 32px; /* AUMENTADO: título maior */
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: var(--text-color-main); /* ALTERADO: cor principal */
+}
+
+.login-subtitle {
+  color: var(--text-color-main); /* ALTERADO: cor principal */
+  margin-bottom: 0;
+  font-size: 16px; /* AUMENTADO: texto maior */
+  opacity: 0.9; /* ADICIONADO: leve transparência */
+}
+
+.signup-link {
+  color: #22c55e; /* ALTERADO: verde vibrante */
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.signup-link:hover {
+  color: #16a34a; /* Verde mais escuro no hover */
+  text-decoration: underline;
+}
+
+/* Formulário */
+.login-form {
+  margin-bottom: 40px; /* AUMENTADO: mais espaço */
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 18px 20px; /* AUMENTADO: padding maior */
+  border: 2px solid rgba(255, 255, 255, 0.2); /* ALTERADO: borda transparente */
+  border-radius: 12px;
+  font-size: 16px;
+  background-color: rgba(255, 255, 255, 0.1); /* ALTERADO: fundo transparente */
+  color: var(--text-color-main);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4); /* ALTERADO: foco transparente */
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: scale(1.02);
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.7); /* ALTERADO: placeholder transparente */
+}
+
+/* Container da senha */
+.password-container {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7); /* ALTERADO: cor transparente */
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: color 0.3s ease;
+}
+
+.password-toggle:hover {
+  color: var(--text-color-main);
+}
+
+/* Mensagem de feedback */
+.login-message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.1); /* ALTERADO: fundo transparente */
+  color: var(--text-color-main);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Botão de login */
+.login-button {
+  width: 100%;
+  padding: 18px; /* AUMENTADO: padding maior */
+  background-color: #ffffff; /* ALTERADO: fundo branco */
+  color: #275736; /* ALTERADO: texto verde */
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.login-button:hover:not(:disabled) {
+  background-color: #f8f9fa; /* ALTERADO: hover cinza claro */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Seção sobre o app */
+.about-section {
+  text-align: center;
+  padding-top: 30px; /* AUMENTADO: mais espaço */
+}
+
+.about-title {
+  font-size: 18px; /* AUMENTADO: título maior */
+  font-weight: bold;
+  margin-bottom: 20px; /* AUMENTADO: mais espaço */
+  color: var(--text-color-main);
+}
+
+.features {
+  display: flex;
+  flex-direction: column; /* ALTERADO: coluna vertical */
+  align-items: center;
+  gap: 12px; /* AUMENTADO: mais espaço entre itens */
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* AUMENTADO: mais espaço entre ícone e texto */
+}
+
+.feature-icon {
+  font-size: 18px; /* DIMINUÍDO: ícone menor */
+}
+
+.feature-item span:last-child {
+  font-size: 16px; /* AUMENTADO: texto maior */
+  color: var(--text-color-main);
+  opacity: 0.9; /* ADICIONADO: leve transparência */
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .login-page {
+    padding: 10px;
+  }
+  
+  .login-container {
+    padding: 30px 20px;
+    max-width: 100%;
+  }
+  
+  .login-title {
+    font-size: 28px;
+  }
+}
+
+/* Tema escuro - cores específicas */
+body[data-theme="dark"] .form-input {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .form-input:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+body[data-theme="dark"] .login-message {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
