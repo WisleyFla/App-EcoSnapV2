@@ -41,26 +41,26 @@ function Profile() {
 
   // Carregar dados do perfil quando o componente monta
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.id) { // MUDANÇA: user.uid → user.id (Supabase)
       loadProfileData();
       loadSettingsData();
     }
   }, [user]);
 
-  // Função para carregar dados do perfil do Firebase
+  // Função para carregar dados do perfil do Supabase
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      const result = await loadUserProfile(user.uid);
+      const result = await loadUserProfile(user.id); // MUDANÇA: user.uid → user.id
       
       if (result.success && result.data) {
         const loadedData = {
-          name: result.data.name || 'Usuário EcoSnap',
-          handle: result.data.handle || '@usuario_ecosnap',
+          name: result.data.display_name || 'Usuário EcoSnap', // MUDANÇA: name → display_name
+          handle: result.data.username ? `@${result.data.username}` : '@usuario_ecosnap', // MUDANÇA: handle → username
           bio: result.data.bio || 'Apaixonado pela natureza e pela conservação do Cerrado. Compartilhando descobertas e aprendizados sobre a biodiversidade brasileira. 🌱',
-          location: result.data.location || 'Brasília, DF',
+          location: result.data.institution || 'Brasília, DF', // MUDANÇA: location → institution
           website: result.data.website || '',
-          profileImageURL: result.data.profileImageURL || null
+          profileImageURL: result.data.avatar_url || null // MUDANÇA: profileImageURL → avatar_url
         };
         
         setProfileData(loadedData);
@@ -74,10 +74,10 @@ function Profile() {
     }
   };
 
-  // Função para carregar configurações do Firebase
+  // Função para carregar configurações do Supabase
   const loadSettingsData = async () => {
     try {
-      const result = await loadUserSettings(user.uid);
+      const result = await loadUserSettings(user.id); // MUDANÇA: user.uid → user.id
       
       if (result.success && result.settings) {
         const settings = result.settings;
@@ -146,7 +146,7 @@ function Profile() {
         return;
     }
 
-    // Salvar configurações no Firebase
+    // Salvar configurações no Supabase
     try {
       const currentSettings = {
         pushNotifications,
@@ -157,7 +157,7 @@ function Profile() {
         [settingName]: newState
       };
       
-      await saveUserSettings(user.uid, currentSettings);
+      await saveUserSettings(user.id, currentSettings); // MUDANÇA: user.uid → user.id
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
       toast.error('Erro ao salvar configuração');
@@ -177,7 +177,7 @@ function Profile() {
         setUploadProgress(progress);
       };
 
-      const result = await updateProfileImage(user.uid, file, onProgress);
+      const result = await updateProfileImage(user.id, file, onProgress); // MUDANÇA: user.uid → user.id
       
       if (result.success) {
         const updatedProfile = {
@@ -207,7 +207,7 @@ function Profile() {
     try {
       setIsUploadingImage(true);
       
-      await removeProfileImage(user.uid);
+      await removeProfileImage(user.id); // MUDANÇA: user.uid → user.id
       
       const updatedProfile = {
         ...profileData,
@@ -271,19 +271,23 @@ function Profile() {
     try {
       setIsSaving(true);
       
+      // MUDANÇA: Mapear campos do Profile para campos do Supabase
       const dataToSave = {
-        ...editingProfile,
-        handle: correctedHandle
+        display_name: editingProfile.name,
+        username: correctedHandle.replace('@', ''), // Remover @ para salvar no banco
+        bio: editingProfile.bio,
+        institution: editingProfile.location, // Usar institution como location
+        website: editingProfile.website
       };
       
-      await saveUserProfile(user.uid, dataToSave);
+      await saveUserProfile(user.id, dataToSave); // MUDANÇA: user.uid → user.id
       
-      setProfileData({...dataToSave});
+      setProfileData({...editingProfile, handle: correctedHandle});
       setIsEditModalOpen(false);
       
       toast.success('Perfil atualizado com sucesso!');
       
-      console.log('Dados do perfil salvos no Firebase:', dataToSave);
+      console.log('Dados do perfil salvos no Supabase:', dataToSave);
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
       toast.error('Erro ao salvar perfil. Tente novamente.');

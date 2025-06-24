@@ -1,6 +1,7 @@
 // src/services/imageService.js
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../config/firebase';
+// ATUALIZADO: Usando Telegram Storage ao invés de Firebase Storage
+
+import { telegramStorage } from './telegramStorage';
 
 // Função para redimensionar imagem antes do upload
 const resizeImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.8) => {
@@ -42,14 +43,14 @@ const resizeImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.8) => {
 // Função para validar arquivo de imagem
 export const validateImageFile = (file) => {
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 50 * 1024 * 1024; // 50MB (Telegram suporta até 2GB, mas vamos ser conservadores)
   
   if (!validTypes.includes(file.type)) {
     throw new Error('Tipo de arquivo não suportado. Use JPG, PNG ou WebP.');
   }
   
   if (file.size > maxSize) {
-    throw new Error('Arquivo muito grande. Máximo 5MB.');
+    throw new Error('Arquivo muito grande. Máximo 50MB.');
   }
   
   return true;
@@ -63,56 +64,32 @@ export const uploadProfileImage = async (userId, file, onProgress = null) => {
     
     // Redimensionar imagem
     console.log('Redimensionando imagem...');
+    if (onProgress) onProgress(10);
+    
     const resizedFile = await resizeImage(file);
+    if (onProgress) onProgress(30);
     
-    // Criar referência no Storage
-    const imageRef = ref(storage, `profile-images/${userId}/profile.jpg`);
+    console.log('Iniciando upload para Telegram...');
     
-    // Fazer upload com metadata
-    const metadata = {
-      contentType: 'image/jpeg',
-      customMetadata: {
-        uploadedAt: new Date().toISOString(),
-        originalName: file.name
-      }
-    };
+    // Fazer upload para Telegram
+    const caption = `Profile Image - User: ${userId}`;
+    const result = await telegramStorage.uploadImage(resizedFile, caption);
     
-    console.log('Iniciando upload...');
+    if (onProgress) onProgress(90);
     
-    // Upload com progresso (se callback fornecido)
-    let uploadTask;
-    if (onProgress) {
-      const { uploadBytesResumable } = await import('firebase/storage');
-      uploadTask = uploadBytesResumable(imageRef, resizedFile, metadata);
-      
-      return new Promise((resolve, reject) => {
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            onProgress(Math.round(progress));
-          },
-          (error) => {
-            console.error('Erro no upload:', error);
-            reject(new Error('Erro ao fazer upload da imagem'));
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              console.log('Upload concluído. URL:', downloadURL);
-              resolve(downloadURL);
-            } catch (error) {
-              reject(new Error('Erro ao obter URL da imagem'));
-            }
-          }
-        );
-      });
-    } else {
-      // Upload simples sem progresso
-      const snapshot = await uploadBytes(imageRef, resizedFile, metadata);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log('Upload concluído. URL:', downloadURL);
-      return downloadURL;
+    if (!result.success) {
+      throw new Error(result.error || 'Erro ao fazer upload da imagem');
     }
+    
+    console.log('Upload concluído. URL:', result.download_url);
+    if (onProgress) onProgress(100);
+    
+    return {
+      url: result.download_url,
+      file_id: result.file_id,
+      message_id: result.message_id,
+      file_size: result.file_size
+    };
     
   } catch (error) {
     console.error('Erro no upload:', error);
@@ -121,31 +98,122 @@ export const uploadProfileImage = async (userId, file, onProgress = null) => {
 };
 
 // Função para deletar foto de perfil anterior
-export const deleteProfileImage = async (userId) => {
+export const deleteProfileImage = async (messageId) => {
   try {
-    const imageRef = ref(storage, `profile-images/${userId}/profile.jpg`);
-    await deleteObject(imageRef);
-    console.log('Imagem anterior deletada com sucesso');
+    if (!messageId) {
+      console.log('Nenhum message_id fornecido para deletar');
+      return;
+    }
+    
+    const deleted = await telegramStorage.deleteFile(messageId);
+    if (deleted) {
+      console.log('Imagem anterior deletada com sucesso');
+    } else {
+      console.log('Erro ao deletar imagem anterior');
+    }
   } catch (error) {
     // Não é um erro crítico se a imagem não existir
     console.log('Nenhuma imagem anterior para deletar ou erro ao deletar:', error.message);
   }
 };
 
-// Função para obter URL da foto de perfil
+// Função para obter URL da foto de perfil (agora vem do banco)
 export const getProfileImageURL = async (userId) => {
   try {
-    const imageRef = ref(storage, `profile-images/${userId}/profile.jpg`);
-    const url = await getDownloadURL(imageRef);
-    return url;
+    // Esta função agora só retorna a URL salva no banco
+    // A URL real vem do profileService.loadUserProfile()
+    console.log('URL da foto será carregada do banco de dados');
+    return null; // Será implementada no profileService
   } catch (error) {
-    console.log('Nenhuma foto de perfil encontrada para o usuário');
+    console.log('Erro ao obter URL da foto de perfil:', error);
     return null;
   }
 };
 
+// Função para upload de múltiplas imagens (para posts)
+export const uploadPostImages = async (images, postId, onProgress = null) => {
+  try {
+    const uploadedImages = [];
+    const totalImages = images.length;
+    
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      
+      // Validar cada imagem
+      validateImageFile(image);
+      
+      // Redimensionar para posts (tamanho maior)
+      const resizedImage = await resizeImage(image, 1200, 1200, 0.85);
+      
+      // Upload para Telegram
+      const caption = `Post Image - Post: ${postId} - Image: ${i + 1}/${totalImages}`;
+      const result = await telegramStorage.uploadImage(resizedImage, caption);
+      
+      if (result.success) {
+        uploadedImages.push({
+          url: result.download_url,
+          file_id: result.file_id,
+          message_id: result.message_id,
+          file_size: result.file_size,
+          order: i
+        });
+      } else {
+        console.error(`Erro no upload da imagem ${i + 1}:`, result.error);
+      }
+      
+      // Callback de progresso
+      if (onProgress) {
+        onProgress(Math.round(((i + 1) / totalImages) * 100));
+      }
+    }
+    
+    return uploadedImages;
+  } catch (error) {
+    console.error('Erro no upload de imagens do post:', error);
+    throw error;
+  }
+};
+
+// Função para upload de vídeos
+export const uploadVideo = async (file, caption = '', onProgress = null) => {
+  try {
+    const validTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/webm'];
+    const maxSize = 2 * 1024 * 1024 * 1024; // 2GB (limite do Telegram)
+    
+    if (!validTypes.includes(file.type)) {
+      throw new Error('Tipo de vídeo não suportado. Use MP4, MOV, AVI ou WebM.');
+    }
+    
+    if (file.size > maxSize) {
+      throw new Error('Vídeo muito grande. Máximo 2GB.');
+    }
+    
+    if (onProgress) onProgress(10);
+    
+    // Upload direto para Telegram (sem compressão por enquanto)
+    const result = await telegramStorage.uploadFile(file, caption);
+    
+    if (onProgress) onProgress(100);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Erro ao fazer upload do vídeo');
+    }
+    
+    return {
+      url: result.download_url,
+      file_id: result.file_id,
+      message_id: result.message_id,
+      file_size: result.file_size
+    };
+    
+  } catch (error) {
+    console.error('Erro no upload do vídeo:', error);
+    throw error;
+  }
+};
+
 // Função para comprimir imagem para diferentes tamanhos
-export const createImageThumbnails = async (file, userId) => {
+export const createImageThumbnails = async (file, prefix = 'thumbnail') => {
   try {
     const thumbnails = {};
     
@@ -158,22 +226,38 @@ export const createImageThumbnails = async (file, userId) => {
     
     for (const size of sizes) {
       const resized = await resizeImage(file, size.width, size.height, 0.9);
-      const imageRef = ref(storage, `profile-images/${userId}/profile_${size.name}.jpg`);
+      const caption = `${prefix} - ${size.name} (${size.width}x${size.height})`;
       
-      const snapshot = await uploadBytes(imageRef, resized, {
-        contentType: 'image/jpeg',
-        customMetadata: {
-          size: size.name,
-          uploadedAt: new Date().toISOString()
-        }
-      });
+      const result = await telegramStorage.uploadImage(resized, caption);
       
-      thumbnails[size.name] = await getDownloadURL(snapshot.ref);
+      if (result.success) {
+        thumbnails[size.name] = {
+          url: result.download_url,
+          file_id: result.file_id,
+          message_id: result.message_id,
+          dimensions: { width: size.width, height: size.height }
+        };
+      }
     }
     
     return thumbnails;
   } catch (error) {
     console.error('Erro ao criar thumbnails:', error);
     throw new Error('Erro ao processar imagem');
+  }
+};
+
+// Função utilitária para verificar se Telegram está configurado
+export const isTelegramConfigured = () => {
+  return telegramStorage.isConfigured();
+};
+
+// Função para testar upload
+export const testTelegramUpload = async () => {
+  try {
+    return await telegramStorage.testConnection();
+  } catch (error) {
+    console.error('Erro no teste do Telegram:', error);
+    return { success: false, error: error.message };
   }
 };

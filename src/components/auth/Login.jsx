@@ -1,10 +1,12 @@
 // src/components/auth/Login.jsx
+// ATUALIZADO para usar Supabase (mantém mesmo design)
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext'; // ADICIONADO: Import do tema
+import { useTheme } from '../../context/ThemeContext';
 import Logo from '../ui/Logo';
-import './Login.css'; // Importa o CSS específico do Login
+import './Login.css';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -14,24 +16,13 @@ function Login() {
   const [message, setMessage] = useState('');
 
   const { login } = useAuth();
-  const { isDarkMode } = useTheme(); // ADICIONADO: Acesso ao tema
+  const { isDarkMode } = useTheme();
   const navigate = useNavigate();
 
-  /**
-   * Alterna a visibilidade do campo de senha.
-   * @returns {void}
-   */
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  /**
-   * Lida com o envio do formulário de login.
-   * Previne o comportamento padrão do formulário, ativa o carregamento,
-   * tenta autenticar com o Firebase e lida com sucesso/erro.
-   * @param {Event} e - O evento de envio do formulário.
-   * @returns {Promise<void>}
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -43,42 +34,35 @@ function Login() {
       navigate('/');
     } catch (error) {
       console.error("Erro ao fazer login:", error);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      
+      // Tratamento de erros específicos do Supabase
+      const errorMessage = error.message;
+      
+      if (errorMessage.includes('Email ou senha inválidos')) {
         setMessage('Email ou senha inválidos. Por favor, verifique suas credenciais.');
-      } else if (error.code === 'auth/invalid-email') {
-        setMessage('O formato do email é inválido.');
-      } else if (error.code === 'auth/too-many-requests') {
-        setMessage('Muitas tentativas de login. Por favor, tente novamente mais tarde.');
-      }
-      else {
-        setMessage('Ocorreu um erro ao tentar fazer login. Tente novamente.');
+      } else if (errorMessage.includes('Email not confirmed')) {
+        setMessage('Email não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.');
+      } else if (errorMessage.includes('Too many requests')) {
+        setMessage('Muitas tentativas de login. Por favor, aguarde alguns minutos.');
+      } else {
+        setMessage(errorMessage || 'Ocorreu um erro ao tentar fazer login. Tente novamente.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Adiciona um efeito visual de escala ao elemento pai do input/select quando focado.
-   * @param {Event} e - O evento de foco.
-   * @returns {void}
-   */
   const handleInputFocus = (e) => {
     e.target.parentElement.style.transform = 'scale(1.02)';
   };
 
-  /**
-   * Remove o efeito visual de escala do elemento pai do input/select quando desfocado.
-   * @param {Event} e - O evento de desfoque.
-   * @returns {void}
-   */
   const handleInputBlur = (e) => {
     e.target.parentElement.style.transform = 'scale(1)';
   };
 
   return (
-    <div className="login-page"> {/* ALTERADO: Container principal da página */}
-      <div className="login-container"> {/* ALTERADO: Container do formulário centralizado */}
+    <div className="login-page">
+      <div className="login-container">
         <div className="logo-section">
           <div className="logo">
             <Logo />
@@ -90,7 +74,7 @@ function Login() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form"> {/* ADICIONADO: Classe para o formulário */}
+        <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <input
               type="email"

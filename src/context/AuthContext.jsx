@@ -1,15 +1,11 @@
 // src/context/AuthContext.jsx
+// NOVA versão usando Supabase (substitui a versão Firebase)
+
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { 
-  onAuthStateChanged, 
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut
-} from 'firebase/auth'
-import { auth, debugFirebase } from '../config/firebase'
+import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
-const AuthContext = createContext()
+const AuthContext = createContext({})
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -22,177 +18,206 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  const USER_TYPES = {
-    STUDENT: 'student',
-    TEACHER: 'teacher',
-    ADMIN: 'admin'
-  }
-
-  // Debug ao montar o componente
-  useEffect(() => {
-    console.log('🔍 INICIANDO DEBUG COMPLETO DO FIREBASE:')
-    const debugInfo = debugFirebase()
-    console.log('Debug result:', debugInfo)
-    
-    if (!debugInfo.auth) {
-      console.error('❌ FIREBASE AUTH NÃO INICIALIZADO!')
-      alert('ERRO: Firebase Auth não foi inicializado corretamente!')
-      return
-    }
-  }, [])
+  const [session, setSession] = useState(null)
 
   useEffect(() => {
-    console.log('🔐 Configurando listener de autenticação...')
-    
-    if (!auth) {
-      console.error('❌ Auth object não disponível!')
-      setLoading(false)
-      return
-    }
-    
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('👤 Auth state changed:', user ? `Logado: ${user.uid}` : 'Deslogado')
-      setUser(user)
+    // Verificar sessão atual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    return unsubscribe
+    // Escutar mudanças de autenticação
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+      setLoading(false)
+
+      // Toast para eventos de auth
+      if (event === 'SIGNED_IN') {
+        toast.success('Login realizado com sucesso!')
+      } else if (event === 'SIGNED_OUT') {
+        toast.success('Logout realizado com sucesso!')
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const register = async (email, password, userData) => {
-    console.log('📝 INICIANDO REGISTRO COM DEBUG COMPLETO')
-    console.log('📧 Email:', email)
-    console.log('👤 Dados do usuário:', userData)
-    
-    // Debug pré-registro
-    console.log('🔍 Verificando Auth object:', auth)
-    if (!auth) {
-      const error = 'Firebase Auth não está disponível'
-      console.error('❌', error)
-      toast.error(error)
-      throw new Error(error)
-    }
-
-    console.log('🔍 Verificando se Auth está configurado:', auth.app)
-    console.log('🔍 Config do Auth:', auth.config)
-
+  // Fazer login
+  const login = async (email, password) => {
     try {
-      console.log('🚀 Chamando createUserWithEmailAndPassword...')
-      console.log('🔗 URL que será chamada:', `https://identitytoolkit.googleapis.com/v1/accounts:signUp`)
-      
-      const result = await createUserWithEmailAndPassword(auth, email, password)
-      
-      console.log('✅ SUCESSO! Usuário criado:', result.user.uid)
-      console.log('📊 Resultado completo:', result)
-      
-      toast.success('Conta criada com sucesso! 🎉')
-      return result
+      setLoading(true)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
+      if (error) throw error
+
+      return data
     } catch (error) {
-      console.error('❌ ERRO DETALHADO NO REGISTRO:')
-      console.error('- Code:', error.code)
-      console.error('- Message:', error.message)
-      console.error('- Stack:', error.stack)
-      console.error('- Erro completo:', error)
+      console.error('Erro no login:', error)
       
-      // Diagnóstico específico para auth/configuration-not-found
-      if (error.code === 'auth/configuration-not-found') {
-        console.error('🚨 DIAGNÓSTICO PARA auth/configuration-not-found:')
-        console.error('1. Verifique se Authentication está ATIVADO no Firebase Console')
-        console.error('2. Verifique se Email/Password está HABILITADO')
-        console.error('3. Verifique se o Project ID está correto')
-        console.error('4. Verifique se a API Key está correta')
-        
-        toast.error('❌ Erro de configuração do Firebase. Verifique o console!')
-        
-        // Instruções específicas
-        alert(`
-🚨 ERRO DE CONFIGURAÇÃO FIREBASE
-
-PASSOS PARA RESOLVER:
-
-1. Acesse: https://console.firebase.google.com/project/ecosnap-9529a
-
-2. Vá em "Authentication" → "Sign-in method"
-
-3. Clique em "Email/password" e ATIVE a primeira opção
-
-4. Salve e tente novamente
-
-Se o problema persistir, o projeto pode não estar configurado corretamente.
-        `)
+      // Tratar erros específicos do Supabase
+      if (error.message.includes('Invalid login credentials')) {
+        throw new Error('Email ou senha inválidos')
+      } else if (error.message.includes('Email not confirmed')) {
+        throw new Error('Email não confirmado. Verifique sua caixa de entrada.')
+      } else {
+        throw new Error(error.message || 'Erro ao fazer login')
       }
-      
-      let errorMessage = 'Erro ao criar conta'
-      
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'Este email já está sendo usado'
-          break
-        case 'auth/weak-password':
-          errorMessage = 'A senha deve ter pelo menos 6 caracteres'
-          break
-        case 'auth/invalid-email':
-          errorMessage = 'Email inválido'
-          break
-        case 'auth/operation-not-allowed':
-          errorMessage = 'Cadastro não permitido. Authentication não está ativado!'
-          break
-        case 'auth/configuration-not-found':
-          errorMessage = 'Configuração do Firebase incorreta ou Authentication não ativado'
-          break
-        case 'auth/network-request-failed':
-          errorMessage = 'Erro de rede. Verifique sua conexão'
-          break
-        default:
-          errorMessage = `Firebase Error: ${error.message}`
-      }
-      
-      toast.error(errorMessage)
-      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const login = async (email, password) => {
+  // Fazer registro
+  const register = async (email, password, userData = {}) => {
     try {
-      console.log('🔑 Tentando login:', email)
-      const result = await signInWithEmailAndPassword(auth, email, password)
-      console.log('✅ Login bem-sucedido:', result.user.uid)
-      toast.success('Login realizado!')
-      return result
+      setLoading(true)
+      
+      // 1. Criar conta no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: userData.displayName || email.split('@')[0],
+          }
+        }
+      })
+
+      if (authError) throw authError
+
+      // 2. Criar perfil na tabela users
+      if (authData.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email,
+            username: userData.username || email.split('@')[0],
+            display_name: userData.displayName || email.split('@')[0],
+            bio: userData.bio || '',
+            role: userData.role || 'estudante', // Role padrão
+            institution: userData.institution || '',
+            grade_year: userData.gradeYear || '',
+            specialization: userData.specialization || []
+          })
+
+        if (profileError) {
+          console.error('Erro ao criar perfil:', profileError)
+          // Continuar mesmo se der erro no perfil
+        }
+      }
+
+      return authData
     } catch (error) {
-      console.error('❌ Erro no login:', error)
-      toast.error('Erro no login: ' + error.message)
+      console.error('Erro no registro:', error)
+      
+      if (error.message.includes('already registered')) {
+        throw new Error('Este email já está cadastrado')
+      } else if (error.message.includes('Password should be at least')) {
+        throw new Error('A senha deve ter pelo menos 6 caracteres')
+      } else {
+        throw new Error(error.message || 'Erro ao criar conta')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fazer logout
+  const logout = async () => {
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch (error) {
+      console.error('Erro no logout:', error)
+      toast.error('Erro ao fazer logout')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Recuperar senha
+  const resetPassword = async (email) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      
+      if (error) throw error
+      
+      toast.success('Email de recuperação enviado!')
+      return true
+    } catch (error) {
+      console.error('Erro ao recuperar senha:', error)
+      throw new Error(error.message || 'Erro ao enviar email de recuperação')
+    }
+  }
+
+  // Atualizar perfil
+  const updateProfile = async (updates) => {
+    try {
+      if (!user) throw new Error('Usuário não autenticado')
+
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      toast.success('Perfil atualizado com sucesso!')
+      return true
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error)
+      toast.error('Erro ao atualizar perfil')
       throw error
     }
   }
 
-  const logout = async () => {
+  // Buscar dados do usuário completos
+  const getUserProfile = async (userId = null) => {
     try {
-      await signOut(auth)
-      // O listener onAuthStateChanged em App.jsx cuidará de atualizar o estado do user para null
-      toast.success('Logout realizado!')
+      const targetId = userId || user?.id
+      if (!targetId) return null
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', targetId)
+        .single()
+
+      if (error) throw error
+      return data
     } catch (error) {
-      console.error('❌ Erro no logout:', error)
-      toast.error('Erro no logout')
+      console.error('Erro ao buscar perfil:', error)
+      return null
     }
   }
 
   const value = {
     user,
+    session,
     loading,
-    USER_TYPES,
-    register,
     login,
+    register,
     logout,
-    isAuthenticated: !!user // Adiciona uma flag de autenticação para fácil verificação
+    resetPassword,
+    updateProfile,
+    getUserProfile
   }
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Renderiza os filhos apenas depois que o estado de autenticação for carregado */}
-      {!loading && children} 
+      {children}
     </AuthContext.Provider>
   )
 }

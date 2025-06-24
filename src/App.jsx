@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Outlet, Link } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './config/firebase';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 
@@ -13,7 +11,7 @@ import Profile from './components/pages/Profile';
 
 import Loading from './components/ui/Loading';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 import './index.css';
@@ -80,22 +78,37 @@ function AuthenticatedLayout() {
   );
 }
 
-function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+// Componente que verifica autenticação
+function AppRoutes() {
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <Loading />;
   }
 
+  return (
+    <Routes>
+      {/* Rotas para usuários NÃO autenticados */}
+      {!user ? (
+        <>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      ) : (
+        /* Rotas para usuários AUTENTICADOS */
+        <Route element={<AuthenticatedLayout />}>
+          <Route index element={<Home />} />
+          <Route path="profile" element={<Profile />} />
+          {/* Adicione outras rotas autenticadas aqui */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      )}
+    </Routes>
+  );
+}
+
+function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -111,24 +124,7 @@ function App() {
           />
           <Router>
             <div className="app">
-              <Routes>
-                {/* Rotas para usuários NÃO autenticados */}
-                {!user ? (
-                  <>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="*" element={<Navigate to="/login" replace />} />
-                  </>
-                ) : (
-                  /* Rotas para usuários AUTENTICADOS */
-                  <Route element={<AuthenticatedLayout />}>
-                    <Route index element={<Home />} />
-                    <Route path="profile" element={<Profile />} />
-                    {/* Adicione outras rotas autenticadas aqui */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Route>
-                )}
-              </Routes>
+              <AppRoutes />
             </div>
           </Router>
         </div>
