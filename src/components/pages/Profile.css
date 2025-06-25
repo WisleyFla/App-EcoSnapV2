@@ -31,10 +31,10 @@
 .profile-avatar-container {
     width: 120px;
     height: 120px;
-    margin: 0 auto 20px;
-    position: relative;
-    border-radius: 50%;
-    overflow: hidden;
+    margin: 0 auto 10px; /* Adiciona espaço abaixo do avatar para os botões */
+    position: relative; /* Mantém relativo para a imagem dentro dele */
+    border-radius: 30%; /* Mantém o border-radius para o container */
+    overflow: hidden; /* Mantém overflow hidden para a imagem */
     background-color: var(--input-bg);
     border: 3px solid var(--post-border);
     transition: all 0.3s ease;
@@ -49,7 +49,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 50%;
+    border-radius: 50%; /* Garante que a imagem seja um círculo */
 }
 
 .profile-avatar-placeholder {
@@ -64,13 +64,19 @@
     transition: background-color 0.3s, color 0.3s;
 }
 
-/* Overlay com botões de ação */
+/* Overlay com botões de ação (agora como irmão do container do avatar) */
 .avatar-overlay {
-    position: absolute;
-    bottom: 0;
-    right: 0;
     display: flex;
-    gap: 5px;
+    justify-content: center; /* Centraliza horizontalmente */
+    gap: 20px;
+    margin-top: 10px; /* Adiciona espaço entre o container do avatar e os botões */
+    margin-bottom: 20px; /* Adiciona espaço entre os botões e o nome do perfil */
+    width: 100%; /* Garante que o overlay ocupe a largura total para centralização */
+    /* REMOVIDO: posicionamento absoluto e related properties */
+    /* position: absolute; */
+    /* top: 100%; */
+    /* left: 50%; */
+    /* transform: translateX(-50%); */
 }
 
 .avatar-action-btn {
@@ -112,13 +118,16 @@
     transform: none !important;
 }
 
-/* Barra de progresso do upload */
+/* Barra de progresso do upload (agora como irmão dos outros elementos) */
 .upload-progress {
-    position: absolute;
-    bottom: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 140px;
+    /* REMOVIDO: posicionamento absoluto e related properties */
+    /* position: absolute; */
+    /* bottom: -30px; */
+    /* left: 50%; */
+    /* transform: translateX(-50%); */
+    
+    width: 140px; /* Mantém a largura definida */
+    margin: 0 auto 20px; /* Centraliza horizontalmente e adiciona espaço abaixo */
     text-align: center;
 }
 

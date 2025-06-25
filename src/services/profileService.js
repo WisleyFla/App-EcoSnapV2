@@ -1,37 +1,17 @@
 // src/services/profileService.js
-// ATUALIZADO: Usando Supabase ao invés de Firebase Firestore
-
 import { supabase } from '../lib/supabase';
-import { uploadProfileImage, deleteProfileImage } from './imageService';
 
-// Função para salvar dados do perfil no Supabase
-export const saveUserProfile = async (userId, profileData) => {
-  try {
-    // Dados a serem salvos
-    const dataToSave = {
-      ...profileData,
-      updated_at: new Date().toISOString(),
-      id: userId // Garantir que o ID está correto
-    };
-    
-    // Usar upsert (insert ou update)
-    const { data, error } = await supabase
-      .from('users')
-      .upsert(dataToSave)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    console.log('Perfil salvo com sucesso no Supabase:', data);
-    return { success: true, data };
-  } catch (error) {
-    console.error('Erro ao salvar perfil:', error);
-    throw new Error('Erro ao salvar perfil: ' + error.message);
-  }
+// Configurações para Telegram Storage
+const TELEGRAM_CONFIG = {
+  BOT_TOKEN: import.meta.env.VITE_TELEGRAM_BOT_TOKEN,
+  CHAT_ID: import.meta.env.VITE_TELEGRAM_CHAT_ID,
+  MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB (limite do Telegram)
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 };
 
-// Função para carregar dados do perfil do Supabase
+// ===================================
+// CARREGAR PERFIL DO USUÁRIO
+// ===================================
 export const loadUserProfile = async (userId) => {
   try {
     const { data, error } = await supabase
@@ -39,358 +19,567 @@ export const loadUserProfile = async (userId) => {
       .select('*')
       .eq('id', userId)
       .single();
-    
-    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-      throw error;
+
+    if (error) {
+      console.error('Erro ao carregar perfil:', error);
+      return { success: false, error: error.message };
     }
-    
-    if (data) {
-      console.log('Perfil carregado do Supabase:', data);
-      return {
-        success: true,
-        data: data
-      };
-    } else {
-      // Usuário não tem perfil salvo ainda
-      console.log('Nenhum perfil encontrado para este usuário');
-      return {
-        success: true,
-        data: null
-      };
-    }
+
+    return { success: true, data };
   } catch (error) {
-    console.error('Erro ao carregar perfil:', error);
-    throw new Error('Erro ao carregar perfil: ' + error.message);
+    console.error('Erro inesperado ao carregar perfil:', error);
+    return { success: false, error: error.message };
   }
 };
 
-// Função para atualizar apenas campos específicos do perfil
-export const updateUserProfile = async (userId, updates) => {
+// ===================================
+// SALVAR PERFIL DO USUÁRIO
+// ===================================
+export const saveUserProfile = async (userId, profileData) => {
   try {
-    const updateData = {
-      ...updates,
-      updated_at: new Date().toISOString()
-    };
-    
     const { data, error } = await supabase
       .from('users')
-      .update(updateData)
+      .update({
+        display_name: profileData.display_name,
+        username: profileData.username,
+        bio: profileData.bio,
+        institution: profileData.institution,
+        website: profileData.website,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId)
       .select()
       .single();
-    
-    if (error) throw error;
-    
-    console.log('Perfil atualizado com sucesso:', data);
+
+    if (error) {
+      console.error('Erro ao salvar perfil:', error);
+      return { success: false, error: error.message };
+    }
+
     return { success: true, data };
   } catch (error) {
-    console.error('Erro ao atualizar perfil:', error);
-    throw new Error('Erro ao atualizar perfil: ' + error.message);
+    console.error('Erro inesperado ao salvar perfil:', error);
+    return { success: false, error: error.message };
   }
 };
 
-// Função para fazer upload de foto de perfil
-export const updateProfileImage = async (userId, file, onProgress = null) => {
-  try {
-    // Primeiro, carregar perfil atual para ver se já tem foto
-    const currentProfile = await loadUserProfile(userId);
-    
-    // Se já tem foto, deletar a anterior
-    if (currentProfile.data?.profile_image_message_id) {
-      await deleteProfileImage(currentProfile.data.profile_image_message_id);
-    }
-    
-    // Fazer upload da nova imagem
-    const imageResult = await uploadProfileImage(userId, file, onProgress);
-    
-    // Atualizar perfil do usuário com dados da nova imagem
-    const updateData = {
-      avatar_url: imageResult.url,
-      profile_image_file_id: imageResult.file_id,
-      profile_image_message_id: imageResult.message_id,
-      has_profile_image: true
-    };
-    
-    await updateUserProfile(userId, updateData);
-    
-    console.log('Foto de perfil atualizada com sucesso');
-    return {
-      success: true,
-      imageURL: imageResult.url,
-      imageData: imageResult
-    };
-  } catch (error) {
-    console.error('Erro ao atualizar foto de perfil:', error);
-    throw error;
-  }
-};
-
-// Função para remover foto de perfil
-export const removeProfileImage = async (userId) => {
-  try {
-    // Carregar perfil atual
-    const currentProfile = await loadUserProfile(userId);
-    
-    if (currentProfile.data?.profile_image_message_id) {
-      // Deletar imagem do Telegram
-      await deleteProfileImage(currentProfile.data.profile_image_message_id);
-    }
-    
-    // Atualizar perfil do usuário
-    const updateData = {
-      avatar_url: null,
-      profile_image_file_id: null,
-      profile_image_message_id: null,
-      has_profile_image: false
-    };
-    
-    await updateUserProfile(userId, updateData);
-    
-    console.log('Foto de perfil removida com sucesso');
-    return { success: true };
-  } catch (error) {
-    console.error('Erro ao remover foto de perfil:', error);
-    throw error;
-  }
-};
-
-// Função para verificar se um nome de usuário já existe
-export const checkUsernameAvailability = async (username, currentUserId) => {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', username)
-      .neq('id', currentUserId) // Excluir o usuário atual
-      .limit(1);
-    
-    if (error) throw error;
-    
-    const available = !data || data.length === 0;
-    
-    console.log('Verificação de username:', { username, available });
-    return { available };
-  } catch (error) {
-    console.error('Erro ao verificar username:', error);
-    return { available: false }; // Assume não disponível em caso de erro
-  }
-};
-
-// Função para buscar usuários por filtros
-export const searchUsers = async (searchTerm, filters = {}) => {
-  try {
-    let query = supabase
-      .from('users')
-      .select('id, username, display_name, avatar_url, bio, role, institution, specialization')
-      .limit(20);
-    
-    // Buscar por nome ou username
-    if (searchTerm) {
-      query = query.or(`display_name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`);
-    }
-    
-    // Filtros adicionais
-    if (filters.role) {
-      query = query.eq('role', filters.role);
-    }
-    
-    if (filters.institution) {
-      query = query.eq('institution', filters.institution);
-    }
-    
-    if (filters.specialization) {
-      query = query.contains('specialization', [filters.specialization]);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return { success: true, data: data || [] };
-  } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    throw new Error('Erro ao buscar usuários: ' + error.message);
-  }
-};
-
-// Função para obter estatísticas do usuário
-export const getUserStats = async (userId) => {
-  try {
-    // Buscar contagem de posts
-    const { count: postsCount } = await supabase
-      .from('posts')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    
-    // Buscar contagem de seguidores
-    const { count: followersCount } = await supabase
-      .from('user_relationships')
-      .select('*', { count: 'exact', head: true })
-      .eq('following_id', userId)
-      .eq('relationship_type', 'follow');
-    
-    // Buscar contagem de seguindo
-    const { count: followingCount } = await supabase
-      .from('user_relationships')
-      .select('*', { count: 'exact', head: true })
-      .eq('follower_id', userId)
-      .eq('relationship_type', 'follow');
-    
-    // Buscar total de likes recebidos
-    const { data: likesData } = await supabase
-      .from('reactions')
-      .select('post_id, posts!inner(user_id)')
-      .eq('posts.user_id', userId)
-      .eq('type', 'like');
-    
-    return {
-      success: true,
-      stats: {
-        posts: postsCount || 0,
-        followers: followersCount || 0,
-        following: followingCount || 0,
-        likes: likesData?.length || 0
-      }
-    };
-  } catch (error) {
-    console.error('Erro ao carregar estatísticas:', error);
-    return {
-      success: false,
-      stats: { posts: 0, followers: 0, following: 0, likes: 0 }
-    };
-  }
-};
-
-// Função para seguir/desseguir usuário
-export const toggleFollow = async (followerId, followingId) => {
-  try {
-    // Verificar se já segue
-    const { data: existing } = await supabase
-      .from('user_relationships')
-      .select('id')
-      .eq('follower_id', followerId)
-      .eq('following_id', followingId)
-      .eq('relationship_type', 'follow')
-      .single();
-    
-    if (existing) {
-      // Já segue, então desseguir
-      const { error } = await supabase
-        .from('user_relationships')
-        .delete()
-        .eq('id', existing.id);
-      
-      if (error) throw error;
-      return { success: true, action: 'unfollowed' };
-    } else {
-      // Não segue, então seguir
-      const { error } = await supabase
-        .from('user_relationships')
-        .insert({
-          follower_id: followerId,
-          following_id: followingId,
-          relationship_type: 'follow'
-        });
-      
-      if (error) throw error;
-      return { success: true, action: 'followed' };
-    }
-  } catch (error) {
-    console.error('Erro ao seguir/desseguir:', error);
-    throw new Error('Erro ao atualizar relacionamento: ' + error.message);
-  }
-};
-
-// Função para verificar se usuário A segue usuário B
-export const checkIfFollowing = async (followerId, followingId) => {
-  try {
-    const { data, error } = await supabase
-      .from('user_relationships')
-      .select('id')
-      .eq('follower_id', followerId)
-      .eq('following_id', followingId)
-      .eq('relationship_type', 'follow')
-      .single();
-    
-    return { isFollowing: !!data };
-  } catch (error) {
-    return { isFollowing: false };
-  }
-};
-
-// Função para salvar configurações do usuário
-export const saveUserSettings = async (userId, settings) => {
-  try {
-    const { error } = await supabase
-      .from('users')
-      .update({
-        settings: settings,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
-    
-    if (error) throw error;
-    
-    console.log('Configurações salvas com sucesso');
-    return { success: true };
-  } catch (error) {
-    console.error('Erro ao salvar configurações:', error);
-    throw new Error('Erro ao salvar configurações: ' + error.message);
-  }
-};
-
-// Função para carregar configurações do usuário
+// ===================================
+// CARREGAR CONFIGURAÇÕES
+// ===================================
 export const loadUserSettings = async (userId) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('settings')
+      .select('preferences')
       .eq('id', userId)
       .single();
-    
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+
+    if (error) {
+      console.error('Erro ao carregar configurações:', error);
+      return { success: false, error: error.message };
     }
-    
-    return {
-      success: true,
-      settings: data?.settings || {}
+
+    const defaultSettings = {
+      pushNotifications: true,
+      publicProfile: true,
+      locationPhotos: false,
+      offlineMode: false,
+      syncDiary: true,
+      theme: 'auto'
     };
+
+    const settings = data?.preferences || defaultSettings;
+    return { success: true, settings };
   } catch (error) {
-    console.error('Erro ao carregar configurações:', error);
-    throw new Error('Erro ao carregar configurações: ' + error.message);
+    console.error('Erro inesperado ao carregar configurações:', error);
+    return { success: false, error: error.message };
   }
 };
 
-// Função para obter perfil completo (com stats)
-export const getCompleteUserProfile = async (userId, viewerId = null) => {
+// ===================================
+// SALVAR CONFIGURAÇÕES
+// ===================================
+export const saveUserSettings = async (userId, settings) => {
   try {
-    // Carregar perfil básico
-    const profileResult = await loadUserProfile(userId);
-    
-    if (!profileResult.success || !profileResult.data) {
-      return { success: false, data: null };
+    const { data, error } = await supabase
+      .from('users')
+      .update({
+        preferences: settings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao salvar configurações:', error);
+      return { success: false, error: error.message };
     }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Erro inesperado ao salvar configurações:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ===================================
+// UPLOAD DE IMAGEM VIA TELEGRAM (COM DEBUG)
+// ===================================
+export const updateProfileImage = async (userId, file, onProgress = null) => {
+  try {
+    console.log('🔄 Iniciando upload de avatar via Telegram...');
     
-    // Carregar estatísticas
-    const statsResult = await getUserStats(userId);
-    
-    let isFollowing = false;
-    if (viewerId && viewerId !== userId) {
-      const followResult = await checkIfFollowing(viewerId, userId);
-      isFollowing = followResult.isFollowing;
+    // Verificar configurações
+    if (!TELEGRAM_CONFIG.BOT_TOKEN || !TELEGRAM_CONFIG.CHAT_ID) {
+      throw new Error('Configurações do Telegram não encontradas. Verifique o arquivo .env');
     }
+
+    console.log('✅ Configurações do Telegram OK');
+
+    // Validações...
+    if (!file) throw new Error('Nenhum arquivo selecionado');
+    if (!TELEGRAM_CONFIG.ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      throw new Error('Tipo de arquivo não permitido. Use JPEG, PNG ou WebP.');
+    }
+    if (file.size > TELEGRAM_CONFIG.MAX_FILE_SIZE) {
+      throw new Error('Arquivo muito grande. Máximo: 20MB');
+    }
+
+    if (onProgress) onProgress(10);
+
+    // PRIMEIRO: Verificar se há avatar anterior para deletar
+    console.log('🔍 Verificando avatar anterior...');
+    try {
+      const { data: currentUser, error } = await supabase
+        .from('users')
+        .select('avatar_url, preferences')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.warn('⚠️ Erro ao buscar usuário atual:', error);
+      } else {
+        console.log('📄 Dados atuais do usuário:', {
+          hasAvatar: !!currentUser?.avatar_url,
+          avatarUrl: currentUser?.avatar_url,
+          preferences: currentUser?.preferences
+        });
+
+        // Se tem avatar anterior do Telegram, tentar deletar
+        if (currentUser?.avatar_url?.includes('api.telegram.org')) {
+          const messageId = currentUser?.preferences?.telegram_message_id;
+          
+          console.log('🗑️ Tentando deletar avatar anterior...');
+          console.log('Message ID para deletar:', messageId);
+          
+          if (messageId) {
+            const deletePayload = {
+              chat_id: TELEGRAM_CONFIG.CHAT_ID,
+              message_id: messageId
+            };
+            
+            console.log('📤 Enviando requisição de deleção:', deletePayload);
+            
+            const deleteResponse = await fetch(
+              `https://api.telegram.org/bot${TELEGRAM_CONFIG.BOT_TOKEN}/deleteMessage`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(deletePayload)
+              }
+            );
+
+            const deleteResult = await deleteResponse.json();
+            console.log('📥 Resposta da deleção:', deleteResult);
+            
+            if (deleteResult.ok) {
+              console.log('✅ Avatar anterior deletado com sucesso!');
+            } else {
+              console.warn('⚠️ Falha ao deletar avatar anterior:', deleteResult);
+            }
+          } else {
+            console.warn('⚠️ Message ID não encontrado, não é possível deletar');
+          }
+        }
+      }
+    } catch (deleteError) {
+      console.warn('⚠️ Erro ao tentar deletar avatar anterior:', deleteError);
+    }
+
+    if (onProgress) onProgress(30);
+
+    // Preparar upload
+    console.log('📤 Preparando upload para Telegram...');
+    const formData = new FormData();
+    formData.append('chat_id', TELEGRAM_CONFIG.CHAT_ID);
+    formData.append('photo', file);
+    formData.append('caption', `🖼️ Avatar: ${userId}\n📅 ${new Date().toLocaleString('pt-BR')}`);
+
+    console.log('📡 Enviando para Telegram...');
     
+    // Enviar para o Telegram
+    const telegramResponse = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_CONFIG.BOT_TOKEN}/sendPhoto`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    );
+
+    if (onProgress) onProgress(60);
+
+    if (!telegramResponse.ok) {
+      const errorData = await telegramResponse.json();
+      console.error('❌ Erro na resposta do Telegram:', errorData);
+      throw new Error(`Erro do Telegram: ${errorData.description || 'Erro desconhecido'}`);
+    }
+
+    const telegramData = await telegramResponse.json();
+    console.log('📥 Resposta completa do Telegram:', telegramData);
+    
+    if (!telegramData.ok) {
+      throw new Error(`Erro do Telegram: ${telegramData.description || 'Falha no upload'}`);
+    }
+
+    if (onProgress) onProgress(80);
+
+    // Extrair dados
+    const photo = telegramData.result.photo;
+    const largestPhoto = photo[photo.length - 1];
+    const fileId = largestPhoto.file_id;
+    const messageId = telegramData.result.message_id;
+
+    console.log('📋 Dados extraídos:', {
+      fileId,
+      messageId,
+      photoSizes: photo.length
+    });
+
+    // Obter URL do arquivo
+    const fileResponse = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_CONFIG.BOT_TOKEN}/getFile?file_id=${fileId}`
+    );
+
+    if (!fileResponse.ok) {
+      throw new Error('Erro ao obter URL da imagem do Telegram');
+    }
+
+    const fileData = await fileResponse.json();
+    console.log('📥 Dados do arquivo:', fileData);
+    
+    if (!fileData.ok) {
+      throw new Error('Erro ao processar arquivo do Telegram');
+    }
+
+    const imageURL = `https://api.telegram.org/file/bot${TELEGRAM_CONFIG.BOT_TOKEN}/${fileData.result.file_path}`;
+    console.log('🔗 URL final da imagem:', imageURL);
+
+    if (onProgress) onProgress(90);
+
+    // Atualizar banco com dados do Telegram
+    const currentPreferencesResult = await supabase
+      .from('users')
+      .select('preferences')
+      .eq('id', userId)
+      .single();
+
+    const currentPreferences = currentPreferencesResult.data?.preferences || {};
+    
+    const updatePayload = {
+      avatar_url: imageURL,
+      preferences: {
+        ...currentPreferences,
+        telegram_message_id: messageId,
+        telegram_file_id: fileId
+      },
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('💾 Atualizando banco de dados:', updatePayload);
+
+    const { data: updateData, error: updateError } = await supabase
+      .from('users')
+      .update(updatePayload)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('❌ Erro ao atualizar perfil:', updateError);
+      throw new Error(updateError.message);
+    }
+
+    console.log('✅ Perfil atualizado com sucesso:', updateData);
+
+    if (onProgress) onProgress(100);
+
     return {
       success: true,
-      data: {
-        ...profileResult.data,
-        stats: statsResult.stats,
-        isFollowing
+      imageURL: imageURL,
+      data: updateData,
+      telegramData: {
+        messageId: messageId,
+        fileId: fileId,
+        filePath: fileData.result.file_path
       }
     };
+
   } catch (error) {
-    console.error('Erro ao carregar perfil completo:', error);
+    console.error('❌ Erro completo no upload:', error);
     throw error;
+  }
+};
+
+// ===================================
+// REMOVER IMAGEM (COM DEBUG)
+// ===================================
+export const removeProfileImage = async (userId) => {
+  try {
+    console.log('🗑️ Iniciando remoção de avatar...');
+    
+    // Obter dados atuais
+    const { data: userData, error: fetchError } = await supabase
+      .from('users')
+      .select('avatar_url, preferences')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('❌ Erro ao buscar dados do usuário:', fetchError);
+      throw new Error(fetchError.message);
+    }
+
+    console.log('📄 Dados do usuário para remoção:', {
+      hasAvatar: !!userData?.avatar_url,
+      avatarUrl: userData?.avatar_url,
+      preferences: userData?.preferences
+    });
+
+    if (!userData?.avatar_url) {
+      console.log('ℹ️ Nenhuma imagem para remover');
+      return { success: true, message: 'Nenhuma imagem para remover' };
+    }
+
+    let telegramDeleted = false;
+
+    // Tentar deletar do Telegram
+    if (userData.avatar_url.includes('api.telegram.org')) {
+      const messageId = userData.preferences?.telegram_message_id;
+      
+      console.log('🔍 Dados para deleção do Telegram:', {
+        messageId,
+        chatId: TELEGRAM_CONFIG.CHAT_ID,
+        botToken: TELEGRAM_CONFIG.BOT_TOKEN ? 'Configurado' : 'Não configurado'
+      });
+      
+      if (messageId) {
+        try {
+          const deletePayload = {
+            chat_id: TELEGRAM_CONFIG.CHAT_ID,
+            message_id: messageId
+          };
+          
+          console.log('📤 Enviando requisição de deleção:', deletePayload);
+          
+          const deleteResponse = await fetch(
+            `https://api.telegram.org/bot${TELEGRAM_CONFIG.BOT_TOKEN}/deleteMessage`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(deletePayload)
+            }
+          );
+
+          const deleteData = await deleteResponse.json();
+          console.log('📥 Resposta da deleção:', deleteData);
+          
+          if (deleteData.ok) {
+            telegramDeleted = true;
+            console.log('✅ Imagem deletada com sucesso do Telegram!');
+          } else {
+            console.warn('⚠️ Falha na deleção do Telegram:', deleteData);
+          }
+        } catch (telegramError) {
+          console.error('❌ Erro na comunicação com Telegram:', telegramError);
+        }
+      } else {
+        console.warn('⚠️ Message ID não encontrado, não é possível deletar do Telegram');
+      }
+    } else {
+      console.log('ℹ️ Avatar não é do Telegram, apenas removendo do perfil');
+    }
+
+    // Limpar dados do banco
+    const currentPreferences = userData.preferences || {};
+    delete currentPreferences.telegram_message_id;
+    delete currentPreferences.telegram_file_id;
+
+    console.log('💾 Atualizando banco para remover avatar...');
+
+    const { data: updateData, error: updateError } = await supabase
+      .from('users')
+      .update({
+        avatar_url: null,
+        preferences: currentPreferences,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('❌ Erro ao atualizar perfil:', updateError);
+      throw new Error(updateError.message);
+    }
+
+    console.log('✅ Banco atualizado com sucesso:', updateData);
+
+    const message = telegramDeleted 
+      ? '✅ Avatar removido completamente (incluindo do Telegram)' 
+      : '⚠️ Avatar removido do perfil (pode permanecer no Telegram)';
+
+    console.log('🎯 Resultado final:', message);
+
+    return { 
+      success: true, 
+      data: updateData,
+      telegramDeleted,
+      message
+    };
+
+  } catch (error) {
+    console.error('❌ Erro completo na remoção:', error);
+    throw error;
+  }
+};
+
+// ===================================
+// OBTER ESTATÍSTICAS DO USUÁRIO
+// ===================================
+export const getUserStats = async (userId) => {
+  try {
+    const stats = {
+      posts: 0,
+      followers: 0,
+      following: 0,
+      points: 0
+    };
+
+    return { success: true, stats };
+
+  } catch (error) {
+    console.error('Erro ao obter estatísticas:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      stats: { posts: 0, followers: 0, following: 0, points: 0 }
+    };
+  }
+};
+
+// ===================================
+// VERIFICAR SE USERNAME ESTÁ DISPONÍVEL
+// ===================================
+export const checkUsernameAvailability = async (username, currentUserId = null) => {
+  try {
+    let query = supabase
+      .from('users')
+      .select('id')
+      .eq('username', username);
+
+    if (currentUserId) {
+      query = query.neq('id', currentUserId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Erro ao verificar username:', error);
+      return { success: false, error: error.message };
+    }
+
+    const available = !data || data.length === 0;
+    return { success: true, available };
+
+  } catch (error) {
+    console.error('Erro inesperado ao verificar username:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ===================================
+// BUSCAR PERFIL PÚBLICO DE OUTRO USUÁRIO
+// ===================================
+export const getPublicProfile = async (username) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        id,
+        username,
+        display_name,
+        bio,
+        avatar_url,
+        institution,
+        website,
+        role,
+        created_at
+      `)
+      .eq('username', username)
+      .single();
+
+    if (error) {
+      console.error('Erro ao buscar perfil público:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+
+  } catch (error) {
+    console.error('Erro inesperado ao buscar perfil público:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ===================================
+// TESTAR CONFIGURAÇÃO DO TELEGRAM
+// ===================================
+export const testTelegramConfig = async () => {
+  try {
+    if (!TELEGRAM_CONFIG.BOT_TOKEN) {
+      return { success: false, error: 'VITE_TELEGRAM_BOT_TOKEN não configurado' };
+    }
+
+    if (!TELEGRAM_CONFIG.CHAT_ID) {
+      return { success: false, error: 'VITE_TELEGRAM_CHAT_ID não configurado' };
+    }
+
+    // Testar se o bot está ativo
+    const response = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_CONFIG.BOT_TOKEN}/getMe`
+    );
+
+    if (!response.ok) {
+      return { success: false, error: 'Token do bot inválido' };
+    }
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      return { success: false, error: 'Bot não está ativo' };
+    }
+
+    return { 
+      success: true, 
+      botInfo: data.result,
+      config: {
+        chatId: TELEGRAM_CONFIG.CHAT_ID,
+        maxFileSize: `${TELEGRAM_CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`
+      }
+    };
+
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 };

@@ -13,6 +13,8 @@ import Loading from './components/ui/Loading';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import TestSupabase from './components/debug/TestSupabase';
+import TelegramTest from './components/debug/TelegramTest';
 
 import './index.css';
 import './App.css';
@@ -127,6 +129,8 @@ function App() {
               <AppRoutes />
             </div>
           </Router>
+          {import.meta.env.DEV && <TestSupabase />}
+          {import.meta.env.DEV && <TelegramTest />}
         </div>
       </AuthProvider>
     </ThemeProvider>

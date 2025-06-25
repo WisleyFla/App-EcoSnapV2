@@ -3,7 +3,17 @@ import { User as UserIcon, Camera, Bell, Globe, MapPin, Activity, Settings, Chec
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { saveUserProfile, loadUserProfile, saveUserSettings, loadUserSettings, updateProfileImage, removeProfileImage } from '../../services/profileService';
+import { supabase } from '../../lib/supabase';
+import { 
+  saveUserProfile, 
+  loadUserProfile, 
+  saveUserSettings, 
+  loadUserSettings, 
+  updateProfileImage, 
+  removeProfileImage,
+  getUserStats,
+  checkUsernameAvailability
+} from '../../services/profileService';
 
 import './Profile.css';
 
@@ -11,7 +21,6 @@ function Profile() {
   const [activeTab, setActiveTab] = useState('activity');
   const [pushNotifications, setPushNotifications] = useState(true);
   const [publicProfile, setPublicProfile] = useState(true);
-  const [locationPhotos, setLocationPhotos] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [syncDiary, setSyncDiary] = useState(true);
 
@@ -26,6 +35,12 @@ function Profile() {
     profileImageURL: null
   });
   const [editingProfile, setEditingProfile] = useState({...profileData});
+  const [userStats, setUserStats] = useState({
+    posts: 0,
+    followers: 0,
+    following: 0,
+    points: 0
+  });
 
   // Estados para upload de imagem
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -39,28 +54,147 @@ function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // ===================================
+  // FUNÇÕES DAS CONFIGURAÇÕES
+  // ===================================
+  
+  // Função para solicitar permissão de notificações
+  const requestNotificationPermission = async () => {
+    try {
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+          console.log('✅ Permissão de notificação concedida');
+          
+          // Mostrar notificação de teste
+          new Notification('EcoSnap', {
+            body: 'Notificações ativadas com sucesso!',
+            icon: '/vite.svg'
+          });
+        } else {
+          console.log('❌ Permissão de notificação negada');
+          toast.error('Permissão de notificação negada pelo navegador');
+        }
+      } else {
+        console.log('❌ Notificações não suportadas neste navegador');
+        toast.error('Notificações não suportadas neste navegador');
+      }
+    } catch (error) {
+      console.error('Erro ao solicitar permissão:', error);
+      toast.error('Erro ao ativar notificações');
+    }
+  };
+
+  // Função para atualizar privacidade do perfil
+  const updateProfilePrivacy = async (isPublic) => {
+    try {
+      // Buscar configurações atuais primeiro
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('users')
+        .select('preferences')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Erro ao buscar configurações atuais:', fetchError);
+        return;
+      }
+
+      const currentPreferences = currentUser?.preferences || {};
+      
+      // Atualizar no banco de dados
+      const { data, error } = await supabase
+        .from('users')
+        .update({ 
+          preferences: {
+            ...currentPreferences,
+            publicProfile: isPublic
+          }
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      console.log('✅ Privacidade do perfil atualizada:', isPublic ? 'Público' : 'Privado');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar privacidade:', error);
+    }
+  };
+
+  // Função para ativar/desativar modo offline
+  const toggleOfflineMode = (enabled) => {
+    try {
+      if (enabled) {
+        // Ativar service worker para cache
+        if ('serviceWorker' in navigator) {
+          console.log('✅ Modo offline ativado - dados serão salvos localmente');
+          localStorage.setItem('ecosnap_offline_mode', 'true');
+        } else {
+          toast.error('Modo offline não suportado neste navegador');
+        }
+      } else {
+        console.log('✅ Modo offline desativado');
+        localStorage.removeItem('ecosnap_offline_mode');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao configurar modo offline:', error);
+    }
+  };
+
+  // Função para ativar/desativar sincronização do diário
+  const toggleDiarySync = (enabled) => {
+    try {
+      if (enabled) {
+        console.log('✅ Sincronização do diário ativada');
+        localStorage.setItem('ecosnap_diary_sync', 'true');
+        
+        // Implementar sincronização automática
+        // TODO: Implementar quando tivermos o sistema de diário
+      } else {
+        console.log('✅ Sincronização do diário desativada');
+        localStorage.removeItem('ecosnap_diary_sync');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao configurar sincronização do diário:', error);
+    }
+  };
+
   // Carregar dados do perfil quando o componente monta
   useEffect(() => {
-    if (user?.id) { // MUDANÇA: user.uid → user.id (Supabase)
+    if (user?.id) {
       loadProfileData();
       loadSettingsData();
+      loadUserStats();
     }
   }, [user]);
+
+  // Função para carregar estatísticas
+  const loadUserStats = async () => {
+    try {
+      const result = await getUserStats(user.id);
+      if (result.success) {
+        setUserStats(result.stats);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
 
   // Função para carregar dados do perfil do Supabase
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      const result = await loadUserProfile(user.id); // MUDANÇA: user.uid → user.id
+      const result = await loadUserProfile(user.id);
       
       if (result.success && result.data) {
         const loadedData = {
-          name: result.data.display_name || 'Usuário EcoSnap', // MUDANÇA: name → display_name
-          handle: result.data.username ? `@${result.data.username}` : '@usuario_ecosnap', // MUDANÇA: handle → username
-          bio: result.data.bio || 'Apaixonado pela natureza e pela conservação do Cerrado. Compartilhando descobertas e aprendizados sobre a biodiversidade brasileira. 🌱',
-          location: result.data.institution || 'Brasília, DF', // MUDANÇA: location → institution
+          name: result.data.display_name || user.email?.split('@')[0] || 'Usuário EcoSnap',
+          handle: result.data.username ? `@${result.data.username}` : `@${user.email?.split('@')[0] || 'usuario'}`,
+          bio: result.data.bio || 'Novo no EcoSnap! 🌱',
+          location: result.data.institution || '',
           website: result.data.website || '',
-          profileImageURL: result.data.avatar_url || null // MUDANÇA: profileImageURL → avatar_url
+          profileImageURL: result.data.avatar_url || null
         };
         
         setProfileData(loadedData);
@@ -77,16 +211,15 @@ function Profile() {
   // Função para carregar configurações do Supabase
   const loadSettingsData = async () => {
     try {
-      const result = await loadUserSettings(user.id); // MUDANÇA: user.uid → user.id
+      const result = await loadUserSettings(user.id);
       
       if (result.success && result.settings) {
         const settings = result.settings;
         
-        if (settings.pushNotifications !== undefined) setPushNotifications(settings.pushNotifications);
-        if (settings.publicProfile !== undefined) setPublicProfile(settings.publicProfile);
-        if (settings.locationPhotos !== undefined) setLocationPhotos(settings.locationPhotos);
-        if (settings.offlineMode !== undefined) setOfflineMode(settings.offlineMode);
-        if (settings.syncDiary !== undefined) setSyncDiary(settings.syncDiary);
+        setPushNotifications(settings.pushNotifications ?? true);
+        setPublicProfile(settings.publicProfile ?? true);
+        setOfflineMode(settings.offlineMode ?? false);
+        setSyncDiary(settings.syncDiary ?? true);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -95,69 +228,91 @@ function Profile() {
 
   const showTab = (tabName) => {
     setActiveTab(tabName);
-    console.log(`Aba ativa alterada para: ${tabName}`);
   };
 
   const toggleSetting = async (settingName) => {
     let newState;
+    let currentSettings = {
+      pushNotifications,
+      publicProfile,
+      offlineMode,
+      syncDiary
+    };
     
     switch (settingName) {
       case 'pushNotifications':
-        setPushNotifications(prev => {
-          newState = !prev;
-          toast.success(`Notificações Push: ${newState ? 'Ativadas' : 'Desativadas'}`);
-          console.log(`Estado Notificações Push: ${newState}`);
-          return newState;
-        });
+        newState = !pushNotifications;
+        setPushNotifications(newState);
+        
+        // Implementar notificações push reais
+        if (newState) {
+          requestNotificationPermission();
+          toast.success('Notificações Push ativadas!');
+        } else {
+          toast.success('Notificações Push desativadas!');
+        }
+        
+        console.log(`Estado Notificações Push: ${newState}`);
         break;
+        
       case 'publicProfile':
-        setPublicProfile(prev => {
-          newState = !prev;
-          toast.success(`Perfil Público: ${newState ? 'Ativado' : 'Desativado'}`);
-          console.log(`Estado Perfil Público: ${newState}`);
-          return newState;
-        });
+        newState = !publicProfile;
+        setPublicProfile(newState);
+        
+        // Atualizar privacidade do perfil (mas não durante o render)
+        setTimeout(() => updateProfilePrivacy(newState), 0);
+        
+        if (newState) {
+          toast.success('Perfil agora é público - visível para todos!');
+        } else {
+          toast.success('Perfil agora é privado - apenas você pode ver!');
+        }
+        
+        console.log(`Estado Perfil Público: ${newState}`);
         break;
-      case 'locationPhotos':
-        setLocationPhotos(prev => {
-          newState = !prev;
-          toast.success(`Localização nas Fotos: ${newState ? 'Ativada' : 'Desativada'}`);
-          console.log(`Estado Localização nas Fotos: ${newState}`);
-          return newState;
-        });
-        break;
+        
       case 'offlineMode':
-        setOfflineMode(prev => {
-          newState = !prev;
-          toast.success(`Modo Offline: ${newState ? 'Ativado' : 'Desativado'}`);
-          console.log(`Estado Modo Offline: ${newState}`);
-          return newState;
-        });
+        newState = !offlineMode;
+        setOfflineMode(newState);
+        
+        // Implementar funcionalidades offline
+        toggleOfflineMode(newState);
+        
+        if (newState) {
+          toast.success('Modo Offline ativado - dados salvos localmente!');
+        } else {
+          toast.success('Modo Offline desativado - usando conexão online!');
+        }
+        
+        console.log(`Estado Modo Offline: ${newState}`);
         break;
+        
       case 'syncDiary':
-        setSyncDiary(prev => {
-          newState = !prev;
-          toast.success(`Sincronizar Diário: ${newState ? 'Ativado' : 'Desativado'}`);
-          console.log(`Estado Sincronizar Diário: ${newState}`);
-          return newState;
-        });
+        newState = !syncDiary;
+        setSyncDiary(newState);
+        
+        // Implementar sincronização do diário
+        toggleDiarySync(newState);
+        
+        if (newState) {
+          toast.success('Sincronização do Diário ativada!');
+        } else {
+          toast.success('Sincronização do Diário desativada!');
+        }
+        
+        console.log(`Estado Sincronizar Diário: ${newState}`);
         break;
+        
       default:
         return;
     }
 
-    // Salvar configurações no Supabase
+    // Salvar configurações no Supabase (após atualizar o estado)
+    currentSettings[settingName] = newState;
+    
     try {
-      const currentSettings = {
-        pushNotifications,
-        publicProfile,
-        locationPhotos,
-        offlineMode,
-        syncDiary,
-        [settingName]: newState
-      };
-      
-      await saveUserSettings(user.id, currentSettings); // MUDANÇA: user.uid → user.id
+      await saveUserSettings(user.id, currentSettings);
+      console.log('Configurações salvas no Supabase:', currentSettings);
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
       toast.error('Erro ao salvar configuração');
@@ -177,7 +332,7 @@ function Profile() {
         setUploadProgress(progress);
       };
 
-      const result = await updateProfileImage(user.id, file, onProgress); // MUDANÇA: user.uid → user.id
+      const result = await updateProfileImage(user.id, file, onProgress);
       
       if (result.success) {
         const updatedProfile = {
@@ -207,7 +362,7 @@ function Profile() {
     try {
       setIsUploadingImage(true);
       
-      await removeProfileImage(user.id); // MUDANÇA: user.uid → user.id
+      await removeProfileImage(user.id);
       
       const updatedProfile = {
         ...profileData,
@@ -254,40 +409,54 @@ function Profile() {
       return;
     }
 
-    if (!editingProfile.handle.trim()) {
-      toast.error('O nome de usuário não pode estar vazio!');
-      return;
-    }
-
-    let correctedHandle = editingProfile.handle;
+    let correctedHandle = editingProfile.handle.trim();
     if (!correctedHandle.startsWith('@')) {
       correctedHandle = '@' + correctedHandle.replace('@', '');
-      setEditingProfile(prev => ({
-        ...prev,
-        handle: correctedHandle
-      }));
+    }
+
+    const username = correctedHandle.replace('@', '');
+    
+    if (!username) {
+      toast.error('O nome de usuário não pode estar vazio!');
+      return;
     }
 
     try {
       setIsSaving(true);
       
-      // MUDANÇA: Mapear campos do Profile para campos do Supabase
+      // Verificar se username está disponível
+      const availabilityCheck = await checkUsernameAvailability(username, user.id);
+      if (!availabilityCheck.success) {
+        toast.error('Erro ao verificar nome de usuário');
+        return;
+      }
+      
+      if (!availabilityCheck.available) {
+        toast.error('Este nome de usuário já está em uso');
+        return;
+      }
+      
+      // Mapear campos do Profile para campos do Supabase
       const dataToSave = {
-        display_name: editingProfile.name,
-        username: correctedHandle.replace('@', ''), // Remover @ para salvar no banco
-        bio: editingProfile.bio,
-        institution: editingProfile.location, // Usar institution como location
-        website: editingProfile.website
+        display_name: editingProfile.name.trim(),
+        username: username,
+        bio: editingProfile.bio.trim(),
+        institution: editingProfile.location.trim(),
+        website: editingProfile.website.trim()
       };
       
-      await saveUserProfile(user.id, dataToSave); // MUDANÇA: user.uid → user.id
+      const result = await saveUserProfile(user.id, dataToSave);
+      
+      if (!result.success) {
+        toast.error(result.error || 'Erro ao salvar perfil');
+        return;
+      }
       
       setProfileData({...editingProfile, handle: correctedHandle});
       setIsEditModalOpen(false);
       
       toast.success('Perfil atualizado com sucesso!');
       
-      console.log('Dados do perfil salvos no Supabase:', dataToSave);
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
       toast.error('Erro ao salvar perfil. Tente novamente.');
@@ -342,53 +511,113 @@ function Profile() {
       />
       
       <div className="profile-header">
-        <div className="profile-avatar-container">
-          {profileData.profileImageURL ? (
-            <img 
-              src={profileData.profileImageURL} 
-              alt="Foto de perfil"
-              className="profile-avatar-image"
-            />
-          ) : (
-            <div className="profile-avatar-placeholder">
-              <UserIcon size={48} />
-            </div>
-          )}
+        {/* Nova estrutura para avatar e botões lado a lado */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '20px',
+          marginBottom: '20px'
+        }}>
+          {/* Avatar */}
+          <div className="profile-avatar-container" style={{
+            width: '120px',
+            height: '120px',
+            margin: '0',
+            borderRadius: '30%',
+            overflow: 'hidden',
+            backgroundColor: 'var(--input-bg)',
+            border: '3px solid var(--post-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {profileData.profileImageURL ? (
+              <img 
+                src={profileData.profileImageURL} 
+                alt="Foto de perfil"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '50%',
+                  display: 'block'
+                }}
+              />
+            ) : (
+              <div className="profile-avatar-placeholder">
+                <UserIcon size={20} />
+              </div>
+            )}
+          </div>
           
-          <div className="avatar-overlay">
+          {/* Botões */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px'
+          }}>
             <button 
-              className="avatar-action-btn upload-btn" 
               onClick={openFileSelector}
               disabled={isUploadingImage}
               title="Alterar foto"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: '3px solid white',
+                backgroundColor: '#2d5a3d',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                fontSize: '20px',
+                transition: 'all 0.3s ease'
+              }}
             >
-              <Camera size={16} />
+              <Camera size={22} />
             </button>
             
             {profileData.profileImageURL && (
               <button 
-                className="avatar-action-btn remove-btn" 
                 onClick={handleRemoveImage}
                 disabled={isUploadingImage}
                 title="Remover foto"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '3px solid white',
+                  backgroundColor: '#e5e5e5',
+                  color: '#333',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  fontSize: '20px',
+                  transition: 'all 0.3s ease'
+                }}
               >
-                <Trash2 size={16} />
+                <Trash2 size={22} />
               </button>
             )}
           </div>
-          
-          {isUploadingImage && (
-            <div className="upload-progress">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
-              <span className="progress-text">{uploadProgress}%</span>
-            </div>
-          )}
         </div>
+        
+        {isUploadingImage && (
+          <div className="upload-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <span className="progress-text">{uploadProgress}%</span>
+          </div>
+        )}
         
         <div className="profile-name">{profileData.name}</div>
         <div className="profile-handle">{profileData.handle}</div>
@@ -412,15 +641,15 @@ function Profile() {
         
         <div className="profile-stats">
           <div className="stat-item">
-            <div className="stat-number">47</div>
+            <div className="stat-number">{userStats.posts}</div>
             <div className="stat-label">Posts</div>
           </div>
           <div className="stat-item">
-            <div className="stat-number">156</div>
+            <div className="stat-number">{userStats.followers}</div>
             <div className="stat-label">Seguidores</div>
           </div>
           <div className="stat-item">
-            <div className="stat-number">89</div>
+            <div className="stat-number">{userStats.following}</div>
             <div className="stat-label">Seguindo</div>
           </div>
         </div>
@@ -484,15 +713,15 @@ function Profile() {
               </div>
               
               <div className="form-group">
-                <label htmlFor="edit-location">Localização</label>
+                <label htmlFor="edit-location">Instituição/Escola</label>
                 <input
                   type="text"
                   id="edit-location"
                   className="form-input"
                   value={editingProfile.location}
                   onChange={(e) => handleInputChange('location', e.target.value)}
-                  placeholder="Sua cidade, estado"
-                  maxLength={30}
+                  placeholder="Sua escola ou instituição"
+                  maxLength={50}
                 />
               </div>
               
@@ -547,38 +776,17 @@ function Profile() {
         <div className="profile-section">
           <h3 className="section-title">Atividade Recente</h3>
           <div className="activity-item">
-            <div className="activity-icon">❤️</div>
+            <div className="activity-icon">🎉</div>
             <div className="activity-content">
-              <div className="activity-text">Curtiu o post de Maria Silva sobre ipê-amarelo</div>
-              <div className="activity-time">há 2 horas</div>
+              <div className="activity-text">Bem-vindo ao EcoSnap! Complete seu perfil para começar.</div>
+              <div className="activity-time">Agora</div>
             </div>
           </div>
           <div className="activity-item">
-            <div className="activity-icon">📝</div>
+            <div className="activity-icon">🌱</div>
             <div className="activity-content">
-              <div className="activity-text">Adicionou uma nova entrada no diário</div>
-              <div className="activity-time">há 4 horas</div>
-            </div>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon">📸</div>
-            <div className="activity-content">
-              <div className="activity-text">Publicou uma foto de bem-te-vi</div>
-              <div className="activity-time">há 1 dia</div>
-            </div>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon">👥</div>
-            <div className="activity-content">
-              <div className="activity-text">Começou a seguir João Costa</div>
-              <div className="activity-time">há 2 dias</div>
-            </div>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon">🌟</div>
-            <div className="activity-content">
-              <div className="activity-text">Conquistou o badge "Observador"</div>
-              <div className="activity-time">há 3 dias</div>
+              <div className="activity-text">Conta criada com sucesso</div>
+              <div className="activity-time">Hoje</div>
             </div>
           </div>
         </div>
@@ -587,36 +795,55 @@ function Profile() {
       <div id="settings" className={`tab-content ${activeTab === 'settings' ? 'active' : ''}`}>
         <div className="profile-section">
           <h3 className="section-title">Configurações</h3>
+          
           <div className="settings-item">
-            <span className="setting-label">Notificações Push</span>
+            <div>
+              <span className="setting-label">Notificações Push</span>
+              <div style={{ fontSize: '12px', color: 'var(--secondary-text-color)', marginTop: '2px' }}>
+                Receber notificações no navegador
+              </div>
+            </div>
             <div className={`toggle-switch ${pushNotifications ? 'active' : ''}`} onClick={() => toggleSetting('pushNotifications')}>
               <div className="toggle-slider"></div>
             </div>
           </div>
+          
           <div className="settings-item">
-            <span className="setting-label">Perfil Público</span>
+            <div>
+              <span className="setting-label">Perfil Público</span>
+              <div style={{ fontSize: '12px', color: 'var(--secondary-text-color)', marginTop: '2px' }}>
+                Seu perfil será visível para outros usuários
+              </div>
+            </div>
             <div className={`toggle-switch ${publicProfile ? 'active' : ''}`} onClick={() => toggleSetting('publicProfile')}>
               <div className="toggle-slider"></div>
             </div>
           </div>
+          
           <div className="settings-item">
-            <span className="setting-label">Localização nas Fotos</span>
-            <div className={`toggle-switch ${locationPhotos ? 'active' : ''}`} onClick={() => toggleSetting('locationPhotos')}>
-              <div className="toggle-slider"></div>
+            <div>
+              <span className="setting-label">Modo Offline</span>
+              <div style={{ fontSize: '12px', color: 'var(--secondary-text-color)', marginTop: '2px' }}>
+                Salvar dados localmente para uso sem internet
+              </div>
             </div>
-          </div>
-          <div className="settings-item">
-            <span className="setting-label">Modo Offline</span>
             <div className={`toggle-switch ${offlineMode ? 'active' : ''}`} onClick={() => toggleSetting('offlineMode')}>
               <div className="toggle-slider"></div>
             </div>
           </div>
+          
           <div className="settings-item">
-            <span className="setting-label">Sincronizar Diário</span>
+            <div>
+              <span className="setting-label">Sincronizar Diário</span>
+              <div style={{ fontSize: '12px', color: 'var(--secondary-text-color)', marginTop: '2px' }}>
+                Backup automático das suas anotações
+              </div>
+            </div>
             <div className={`toggle-switch ${syncDiary ? 'active' : ''}`} onClick={() => toggleSetting('syncDiary')}>
               <div className="toggle-slider"></div>
             </div>
           </div>
+          
           <div className="settings-item" style={{ borderBottom: 'none', paddingTop: '30px' }}>
             <button className="logout-btn" onClick={handleLogout}>
               <LogOut size={18} style={{ marginRight: '8px' }} />

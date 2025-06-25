@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import Logo from '../ui/Logo';
-import './Register.css'; // Importa o CSS específico do Register
+import './Register.css';
 
 function Register() {
   const [name, setName] = useState('');
@@ -15,6 +16,7 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' ou 'error'
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -27,26 +29,84 @@ function Register() {
     }
   };
 
+  // Função para verificar se email já existe
+  const checkEmailExists = async (email) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 = "não encontrou registros" (é o que queremos)
+        console.error('Erro ao verificar email:', error);
+        return false;
+      }
+
+      return data !== null; // Se encontrou dados, email já existe
+    } catch (error) {
+      console.error('Erro na verificação:', error);
+      return false;
+    }
+  };
+
+  // Validação em tempo real do email
+  const handleEmailChange = async (e) => {
+    const emailValue = e.target.value;
+    setEmail(emailValue);
+
+    // Limpar mensagem anterior
+    if (message && messageType === 'error') {
+      setMessage('');
+      setMessageType('');
+    }
+
+    // Verificar email apenas se tiver formato válido
+    if (emailValue.includes('@') && emailValue.includes('.')) {
+      setTimeout(async () => {
+        const emailExists = await checkEmailExists(emailValue);
+        if (emailExists) {
+          setMessage('⚠️ Este email já está cadastrado. Tente fazer login.');
+          setMessageType('error');
+        }
+      }, 500); // Delay para evitar muitas consultas
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage('');
+    setMessageType('');
 
-    // Validações
+    // Validações locais
     if (password !== confirmPassword) {
-      setMessage('As senhas não coincidem!');
+      setMessage('❌ As senhas não coincidem!');
+      setMessageType('error');
       setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setMessage('A senha deve ter pelo menos 6 caracteres!');
+      setMessage('❌ A senha deve ter pelo menos 6 caracteres!');
+      setMessageType('error');
       setIsLoading(false);
       return;
     }
 
     if (!userType) {
-      setMessage('Por favor, selecione seu perfil.');
+      setMessage('❌ Por favor, selecione seu perfil.');
+      setMessageType('error');
+      setIsLoading(false);
+      return;
+    }
+
+    // Verificar email novamente antes de registrar
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      setMessage('❌ Este email já está cadastrado. Tente fazer login ou use outro email.');
+      setMessageType('error');
       setIsLoading(false);
       return;
     }
@@ -63,7 +123,8 @@ function Register() {
         gradeYear: '' // Será preenchido depois
       });
       
-      setMessage('Conta criada com sucesso! Bem-vindo ao EcoSnap!');
+      setMessage('✅ Conta criada com sucesso! Bem-vindo ao EcoSnap!');
+      setMessageType('success');
       
       // Redirecionar após pequeno delay
       setTimeout(() => {
@@ -75,15 +136,24 @@ function Register() {
       
       const errorMessage = error.message;
       
-      if (errorMessage.includes('já está cadastrado')) {
-        setMessage('Este email já está em uso. Tente fazer login ou use outro email.');
-      } else if (errorMessage.includes('formato do email')) {
-        setMessage('O formato do email é inválido.');
-      } else if (errorMessage.includes('6 caracteres')) {
-        setMessage('A senha deve ter pelo menos 6 caracteres.');
+      // Tratamento específico de erros do Supabase
+      if (errorMessage.includes('User already registered')) {
+        setMessage('❌ Este email já está cadastrado. Tente fazer login.');
+      } else if (errorMessage.includes('already registered') || errorMessage.includes('já está cadastrado')) {
+        setMessage('❌ Este email já está em uso. Tente fazer login ou use outro email.');
+      } else if (errorMessage.includes('Invalid email format')) {
+        setMessage('❌ O formato do email é inválido.');
+      } else if (errorMessage.includes('Password should be at least')) {
+        setMessage('❌ A senha deve ter pelo menos 6 caracteres.');
+      } else if (errorMessage.includes('signup disabled')) {
+        setMessage('❌ Cadastro temporariamente desabilitado. Tente novamente mais tarde.');
+      } else if (errorMessage.includes('Email rate limit exceeded')) {
+        setMessage('❌ Muitas tentativas de cadastro. Aguarde alguns minutos.');
       } else {
-        setMessage(errorMessage || 'Ocorreu um erro ao tentar criar a conta. Tente novamente.');
+        setMessage(`❌ ${errorMessage || 'Ocorreu um erro ao tentar criar a conta. Tente novamente.'}`);
       }
+      
+      setMessageType('error');
     } finally {
       setIsLoading(false);
     }
@@ -132,7 +202,7 @@ function Register() {
               placeholder="Email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
             />
@@ -213,7 +283,22 @@ function Register() {
             </select>
           </div>
 
-          {message && <p className="login-message">{message}</p>}
+          {message && (
+            <p 
+              className="login-message" 
+              style={{
+                color: messageType === 'success' ? '#10b981' : '#ef4444',
+                background: messageType === 'success' 
+                  ? 'rgba(16, 185, 129, 0.1)' 
+                  : 'rgba(239, 68, 68, 0.1)',
+                border: `1px solid ${messageType === 'success' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                borderRadius: '4px',
+                padding: '8px 12px'
+              }}
+            >
+              {message}
+            </p>
+          )}
 
           <button type="submit" className="login-button" disabled={isLoading}>
             {isLoading ? 'Criando conta...' : 'Criar conta'}
