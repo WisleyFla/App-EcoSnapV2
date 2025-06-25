@@ -1,0 +1,166 @@
+/* src/components/posts/LocationPicker.css */
+
+.location-picker {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.location-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+.location-icon {
+  font-size: 18px;
+}
+
+.location-label {
+  font-size: 14px;
+}
+
+.location-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.location-loading {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #bbdefb;
+  border-top: 2px solid #1976d2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.location-error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.error-message {
+  font-size: 13px;
+}
+
+.retry-button {
+  background: none;
+  border: none;
+  color: #c62828;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  align-self: flex-start;
+}
+
+.retry-button:hover {
+  color: #b71c1c;
+}
+
+.location-success {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.location-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+.location-address {
+  font-size: 13px;
+  flex: 1;
+}
+
+.remove-button {
+  background: none;
+  border: none;
+  color: #2e7d32;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.remove-button:hover {
+  color: #1b5e20;
+}
+
+.get-location-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.get-location-button:hover {
+  background: #45a049;
+}
+
+.get-location-button:active {
+  background: #3d8b40;
+}
+
+.button-icon {
+  font-size: 16px;
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .location-picker {
+    margin: 12px 0;
+    padding: 12px;
+  }
+  
+  .location-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .remove-button {
+    align-self: flex-end;
+  }
+}

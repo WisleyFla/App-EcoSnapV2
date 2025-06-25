@@ -1,0 +1,140 @@
+/* src/components/posts/CreatePost.css */
+
+.create-post-wrapper {
+  margin-bottom: 24px;
+}
+
+.create-post-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.create-post-trigger:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-color: #e8f5e8;
+  background: #fafffe;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.post-prompt {
+  flex: 1;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 24px;
+  color: #666;
+  font-size: 15px;
+  transition: background-color 0.2s ease;
+}
+
+.create-post-trigger:hover .post-prompt {
+  background: #eeeeee;
+  color: #333;
+}
+
+.post-button {
+  width: 40px;
+  height: 40px;
+  background: #4caf50;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: background-color 0.2s ease;
+}
+
+.create-post-trigger:hover .post-button {
+  background: #45a049;
+}
+
+.login-prompt {
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  color: #666;
+}
+
+.login-prompt p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .create-post-trigger {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .avatar-placeholder {
+    font-size: 16px;
+  }
+  
+  .post-prompt {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  
+  .post-button {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-post-wrapper {
+    margin: 0 8px 20px;
+  }
+  
+  .create-post-trigger {
+    padding: 10px;
+  }
+  
+  .post-prompt span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
