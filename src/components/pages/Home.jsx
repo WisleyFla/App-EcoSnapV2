@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
-import { Home as HomeIcon, Users, Book, User, Sun, MessageCircle, Repeat2, Heart, Share2, MapPin, Search, Plus, X } from 'lucide-react';
+import { Home as HomeIcon, Users, Book, User, Sun, MessageCircle, Repeat2, Heart, Share2, Search, Plus, X, Map } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { postsService } from '../../services/postsService';
+import LocationMapSelector from '../ui/LocationMapSelector';
+import MediaUpload from '../ui/MediaUpload';
 
 function Home() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -22,12 +24,12 @@ function Home() {
   const [newPostModal, setNewPostModal] = useState(false);
   const [newPostData, setNewPostData] = useState({
     content: '',
-    location: '',
-    tags: '',
-    species: '',
-    weather: '',
-    temperature: ''
+    tags: ''
   });
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [showMapSelector, setShowMapSelector] = useState(false);
+  const [postMedia, setPostMedia] = useState([]);
 
   const [recommendedUsers, setRecommendedUsers] = useState([
     { id: 1, name: 'Carlos', handle: '@carlos_pesq', isFollowing: false },
@@ -69,6 +71,79 @@ function Home() {
     }
   };
 
+  // Função para lidar com upload de mídia
+  const handleMediaUpdate = (mediaList) => {
+    setPostMedia(mediaList);
+  };
+  // Função para lidar com seleção de localização do mapa
+  const handleLocationSelect = (location) => {
+    setCurrentLocation({
+      name: location.name,
+      fullAddress: `${location.name} (${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)})`,
+      coordinates: {
+        latitude: location.latitude,
+        longitude: location.longitude
+      },
+      source: 'Mapa'
+    });
+    toast.success(`Local selecionado: ${location.name}`);
+  };
+
+  // Função para abrir seletor de mapa
+  const handleOpenMapSelector = () => {
+    setShowMapSelector(true);
+  };
+
+  // Função simplificada para obter localização atual (opcional)
+  const getQuickLocation = async () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocalização não suportada pelo seu navegador');
+      return;
+    }
+
+    setLocationLoading(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        
+        try {
+          // Obter nome básico
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1&accept-language=pt-BR`
+          );
+          
+          let locationName = 'Localização atual';
+          if (response.ok) {
+            const data = await response.json();
+            const address = data.address || {};
+            locationName = address.village || address.town || address.suburb || 
+                          address.neighbourhood || address.city || 'Localização atual';
+          }
+          
+          setCurrentLocation({
+            name: locationName,
+            fullAddress: `${locationName} (GPS)`,
+            coordinates: { latitude, longitude },
+            accuracy: `${Math.round(accuracy)}m`,
+            source: 'GPS'
+          });
+          
+          setLocationLoading(false);
+          toast.success('Localização atual obtida!');
+        } catch (error) {
+          setLocationLoading(false);
+          toast.error('Erro ao obter detalhes da localização');
+        }
+      },
+      (error) => {
+        setLocationLoading(false);
+        toast.error('Erro ao obter localização atual');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   // Função para criar novo post
   const createPost = async () => {
     if (!newPostData.content.trim()) {
@@ -84,24 +159,22 @@ function Home() {
     try {
       setIsCreatingPost(true);
 
-      // Processar tags e espécies
+      // Processar tags
       const tags = newPostData.tags
         .split(',')
         .map(tag => tag.trim().replace('#', ''))
         .filter(Boolean);
 
-      const species = newPostData.species
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-
       const postData = {
         content: newPostData.content,
-        location: newPostData.location || null,
+        location: currentLocation ? currentLocation.fullAddress : null,
+        coordinates: currentLocation ? currentLocation.coordinates : null,
         tags: tags,
-        species: species,
-        weather: newPostData.weather || null,
-        temperature: newPostData.temperature ? parseInt(newPostData.temperature) : null
+        media: postMedia.map(item => ({
+          url: item.url,
+          type: item.type,
+          name: item.name
+        }))
       };
 
       const newPost = await postsService.createPost(postData, user.id);
@@ -112,12 +185,10 @@ function Home() {
       // Limpar formulário
       setNewPostData({
         content: '',
-        location: '',
-        tags: '',
-        species: '',
-        weather: '',
-        temperature: ''
+        tags: ''
       });
+      setCurrentLocation(null);
+      setPostMedia([]);
       
       setNewPostModal(false);
       toast.success('Post criado com sucesso!');
@@ -175,11 +246,12 @@ function Home() {
     );
   };
 
-  const handleNewPost = () => {
+  const handleNewPost = async () => {
     if (!user?.id) {
       toast.error('Você precisa estar logado para postar!');
       return;
     }
+    
     setNewPostModal(true);
   };
 
@@ -187,12 +259,10 @@ function Home() {
     setNewPostModal(false);
     setNewPostData({
       content: '',
-      location: '',
-      tags: '',
-      species: '',
-      weather: '',
-      temperature: ''
+      tags: ''
     });
+    setCurrentLocation(null);
+    setPostMedia([]);
   };
 
   // Loading inicial
@@ -302,6 +372,54 @@ function Home() {
               {post.hashtags && (
                 <div className="hashtags">{post.hashtags}</div>
               )}
+
+              {/* Exibir mídia do post */}
+              {post.media && post.media.length > 0 && (
+                <div className="post-media">
+                  {post.media.length === 1 ? (
+                    <div className="single-media">
+                      {post.media[0].type === 'image' ? (
+                        <img 
+                          src={post.media[0].url} 
+                          alt="Post media"
+                          className="post-image-single"
+                        />
+                      ) : (
+                        <video 
+                          src={post.media[0].url} 
+                          controls
+                          className="post-video-single"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className={`media-grid grid-${Math.min(post.media.length, 4)}`}>
+                      {post.media.slice(0, 4).map((item, index) => (
+                        <div key={index} className="media-item">
+                          {item.type === 'image' ? (
+                            <img 
+                              src={item.url} 
+                              alt={`Post media ${index + 1}`}
+                              className="post-image-grid"
+                            />
+                          ) : (
+                            <video 
+                              src={item.url} 
+                              muted
+                              className="post-video-grid"
+                            />
+                          )}
+                          {index === 3 && post.media.length > 4 && (
+                            <div className="more-media-overlay">
+                              +{post.media.length - 4}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {post.species && post.species.length > 0 && (
                 <div className="species-tags">
@@ -310,7 +428,10 @@ function Home() {
               )}
               
               <div className="location">
-                <MapPin className="location-icon" size={16} />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="location-icon">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
                 {post.location}
               </div>
 
@@ -366,93 +487,162 @@ function Home() {
                   value={newPostData.content}
                   onChange={(e) => setNewPostData({...newPostData, content: e.target.value})}
                   placeholder="Compartilhe sua descoberta na natureza..."
-                  rows={4}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }}
+                  rows={3}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', resize: 'none' }}
                 />
               </div>
 
-              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Localização</label>
-                  <input
-                    type="text"
-                    value={newPostData.location}
-                    onChange={(e) => setNewPostData({...newPostData, location: e.target.value})}
-                    placeholder="Ex: Trilha das Borboletas"
-                    style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  />
+              {/* Botão de escolher mídia */}
+              <div className="form-group">
+                <label>Mídia</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <MediaUpload onMediaUpdate={handleMediaUpdate} maxFiles={4} compact={true} />
+                  {postMedia.length > 0 && (
+                    <span style={{ fontSize: '12px', color: '#666' }}>
+                      {postMedia.length} arquivo{postMedia.length > 1 ? 's' : ''} selecionado{postMedia.length > 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
+              </div>
 
-                <div className="form-group">
-                  <label>Tags</label>
-                  <input
-                    type="text"
-                    value={newPostData.tags}
-                    onChange={(e) => setNewPostData({...newPostData, tags: e.target.value})}
-                    placeholder="Ex: natureza, aves, manhã"
-                    style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  />
+              {/* Localização com seletor de mapa */}
+              <div className="form-group">
+                <label>Localização</label>
+                <div className="location-display" style={{
+                  padding: '10px',
+                  background: '#f8f9fa',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  minHeight: '40px'
+                }}>
+                  {currentLocation ? (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                          <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <span style={{ color: '#333', fontWeight: '500' }}>{currentLocation.name}</span>
+                        <span style={{ 
+                          fontSize: '10px', 
+                          background: '#e3f2fd', 
+                          color: '#1976d2', 
+                          padding: '2px 6px', 
+                          borderRadius: '10px' 
+                        }}>
+                          {currentLocation.source}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.3' }}>
+                        {currentLocation.fullAddress}
+                        {currentLocation.accuracy && (
+                          <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                            Precisão: {currentLocation.accuracy}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenMapSelector}
+                        style={{
+                          marginTop: '8px',
+                          background: 'none',
+                          border: '1px solid #ddd',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          color: '#666'
+                        }}
+                      >
+                        Alterar no mapa
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={handleOpenMapSelector}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#4CAF50',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Map size={14} />
+                        Selecionar no Mapa
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={getQuickLocation}
+                        disabled={locationLoading}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#2196F3',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: locationLoading ? 'not-allowed' : 'pointer',
+                          opacity: locationLoading ? 0.6 : 1
+                        }}
+                      >
+                        {locationLoading ? (
+                          <div style={{ 
+                            width: '14px', 
+                            height: '14px', 
+                            border: '2px solid transparent', 
+                            borderTop: '2px solid white', 
+                            borderRadius: '50%', 
+                            animation: 'spin 1s linear infinite' 
+                          }} />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                          </svg>
+                        )}
+                        GPS Atual
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Espécies Observadas</label>
+                <label>Tags</label>
                 <input
                   type="text"
-                  value={newPostData.species}
-                  onChange={(e) => setNewPostData({...newPostData, species: e.target.value})}
-                  placeholder="Ex: bem-te-vi, ipê-amarelo"
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  value={newPostData.tags}
+                  onChange={(e) => setNewPostData({...newPostData, tags: e.target.value})}
+                  placeholder="Ex: natureza, aves, manhã, trilha"
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }}
                 />
-              </div>
-
-              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Clima</label>
-                  <select
-                    value={newPostData.weather}
-                    onChange={(e) => setNewPostData({...newPostData, weather: e.target.value})}
-                    style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="ensolarado">☀️ Ensolarado</option>
-                    <option value="nublado">☁️ Nublado</option>
-                    <option value="chuvoso">🌧️ Chuvoso</option>
-                    <option value="parcialmente-nublado">⛅ Parcialmente nublado</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Temperatura (°C)</label>
-                  <input
-                    type="number"
-                    value={newPostData.temperature}
-                    onChange={(e) => setNewPostData({...newPostData, temperature: e.target.value})}
-                    placeholder="Ex: 25"
-                    min="-10"
-                    max="50"
-                    style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  />
-                </div>
               </div>
             </div>
 
             <div className="modal-footer">
-              <button onClick={closeModal} disabled={isCreatingPost}>
+              <button 
+                onClick={closeModal} 
+                disabled={isCreatingPost}
+                className="cancel-btn"
+              >
                 Cancelar
               </button>
               <button 
                 onClick={createPost} 
-                disabled={isCreatingPost || !newPostData.content.trim()}
-                style={{
-                  background: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: '6px',
-                  cursor: isCreatingPost ? 'not-allowed' : 'pointer',
-                  opacity: isCreatingPost || !newPostData.content.trim() ? 0.6 : 1
-                }}
+                disabled={isCreatingPost || !newPostData.content.trim() || !currentLocation}
+                className="publish-btn"
               >
                 {isCreatingPost ? 'Publicando...' : 'Publicar'}
               </button>
@@ -460,6 +650,14 @@ function Home() {
           </div>
         </div>
       )}
+
+      {/* Seletor de Localização com Mapa */}
+      <LocationMapSelector
+        isOpen={showMapSelector}
+        onClose={() => setShowMapSelector(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLocation={currentLocation?.coordinates}
+      />
 
       {/* Botão flutuante para novo post */}
       <div className="floating-buttons">
@@ -488,8 +686,8 @@ function Home() {
           border-radius: 12px;
           padding: 0;
           width: 90%;
-          max-width: 600px;
-          max-height: 90vh;
+          max-width: 420px;
+          max-height: 80vh;
           overflow-y: auto;
         }
 
@@ -502,7 +700,7 @@ function Home() {
         }
 
         .modal-body {
-          padding: 20px;
+          padding: 16px 20px;
         }
 
         .modal-footer {
@@ -518,10 +716,18 @@ function Home() {
           border: none;
           cursor: pointer;
           color: #666;
+          padding: 8px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+          background: #f5f5f5;
+          color: #333;
         }
 
         .form-group {
-          margin-bottom: 15px;
+          margin-bottom: 12px;
         }
 
         .form-group label {
@@ -540,9 +746,165 @@ function Home() {
           color: #2d5a32;
         }
 
+        .cancel-btn {
+          background: #ffffff;
+          border: 2px solid #e0e0e0;
+          color: #666666;
+          padding: 12px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          min-width: 100px;
+        }
+
+        .cancel-btn:hover:not(:disabled) {
+          background: #f8f9fa;
+          border-color: #d0d0d0;
+          color: #333333;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .cancel-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .publish-btn {
+          background: linear-gradient(135deg, #4CAF50, #45a049);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          min-width: 120px;
+          box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+        }
+
+        .publish-btn:hover:not(:disabled) {
+          background: linear-gradient(135deg, #45a049, #3e8e41);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        .publish-btn:disabled {
+          background: #cccccc;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .publish-btn:disabled:hover {
+          background: #cccccc;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .post-btn {
+          background-color: #ffffff;
+          color: #275736;
+          border: 2px solid #275736;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          font-size: 24px;
+          font-weight: bold;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .post-btn:hover {
+          background-color: #f0f0f0;
+          transform: scale(1.1);
+        }
+
         .refresh-btn:hover {
           background: rgba(74, 222, 128, 0.1) !important;
           border-radius: 4px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .post-media {
+          margin: 12px 0;
+        }
+
+        .single-media {
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .post-image-single, .post-video-single {
+          width: 100%;
+          max-height: 400px;
+          object-fit: cover;
+          display: block;
+        }
+
+        .media-grid {
+          display: grid;
+          gap: 4px;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .grid-2 {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .grid-3 {
+          grid-template-columns: 2fr 1fr;
+          grid-template-rows: 1fr 1fr;
+        }
+
+        .grid-3 .media-item:first-child {
+          grid-row: 1 / 3;
+        }
+
+        .grid-4 {
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 1fr 1fr;
+        }
+
+        .media-item {
+          position: relative;
+          aspect-ratio: 1;
+          overflow: hidden;
+        }
+
+        .post-image-grid, .post-video-grid {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .more-media-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 24px;
+          font-weight: bold;
         }
       `}</style>
     </>
