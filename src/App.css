@@ -2,31 +2,36 @@
 
 /* --- Variáveis CSS para Tema --- */
 :root {
-    /* Tema Padrão (Verde) */
-    --bg-color-main: #275736;
+    /* Tema Claro (Azul Esverdeado) - ATUALIZADO */
+    --bg-color-main: #275736; /* Mantém fundo verde */
     --text-color-main: #ffffff;
-    --sidebar-bg: #275736;
+    --sidebar-bg: #275736; /* MUDADO: Verde para sidebar */
+    --sidebar-bg-selected: #2F4F4F; /* NOVO: Azul para item selecionado */
     --sidebar-border: rgba(255, 255, 255, 0.1);
-    --post-bg: #f5f5f5;
-    --post-text-color: #333333;
-    --post-border: #ddd;
-    --secondary-text-color: #666;
-    --action-btn-color: #666;
-    --input-bg: #f5f5f5;
-    --input-text: #333333;
-    --input-placeholder: #666;
-    --hashtag-color: #275736;
-    --follow-btn-bg: #275736;
-    --avatar-bg: #275736;
-    --trend-section-title: #275736;
-    --trend-topic-color: #275736;
+    --post-bg: #2F4F4F; /* Azul esverdeado para posts */
+    --post-text-color: #ffffff; /* Texto branco para contraste */
+    --post-border: rgba(255, 255, 255, 0.2); /* Bordas sutis */
+    --secondary-text-color: rgba(255, 255, 255, 0.7); /* Texto secundário translúcido */
+    --action-btn-color: rgba(255, 255, 255, 0.8); /* Botões de ação */
+    --input-bg: rgba(255, 255, 255, 0.1); /* Background dos inputs */
+    --input-text: #ffffff; /* Texto dos inputs */
+    --input-placeholder: rgba(255, 255, 255, 0.6); /* Placeholder dos inputs */
+    --hashtag-color: #90EE90; /* Verde claro para hashtags */
+    --follow-btn-bg: #275736; /* MUDADO: Verde igual ao fundo para botões */
+    --follow-btn-border: #90EE90; /* NOVO: Contorno verde claro para botões */
+    --avatar-bg: #4A90A4; /* Azul petróleo para avatars */
+    --trend-section-title: #ffffff; /* Títulos das seções */
+    --trend-topic-color: #90EE90; /* Tópicos em verde claro */
+    --search-bg: #2F4F4F; /* MUDADO: Azul esverdeado para busca */
+    --search-border: rgba(255, 255, 255, 0.3); /* Borda da busca */
 }
 
 /* CORRIGIDO: Tema Escuro usando data-theme em vez de dark-theme */
 body[data-theme="dark"] {
     --bg-color-main: #000000;
     --text-color-main: #ffffff;
-    --sidebar-bg: #000000;
+    --sidebar-bg: #000000; /* Escuro permanece preto */
+    --sidebar-bg-selected: rgba(255, 255, 255, 0.2); /* Selecionado claro no escuro */
     --sidebar-border: rgba(255, 255, 255, 0.1);
     --post-bg: #1a1a1a;
     --post-text-color: #ffffff;
@@ -37,10 +42,13 @@ body[data-theme="dark"] {
     --input-text: #ffffff;
     --input-placeholder: #aaaaaa;
     --hashtag-color: #ffffff;
-    --follow-btn-bg: #333333;
+    --follow-btn-bg: #333333; /* Escuro para botões no tema dark */
+    --follow-btn-border: #666666; /* Contorno escuro no tema dark */
     --avatar-bg: #333333;
     --trend-section-title: #ffffff;
     --trend-topic-color: #ffffff;
+    --search-bg: #1a1a1a; /* Escuro para busca no tema escuro */
+    --search-border: #333333;
     
     background-color: #000000 !important;
     background-image: none !important;
@@ -120,6 +128,7 @@ body[data-theme="dark"] .app {
     z-index: 1000;
     border-top: 1px solid var(--sidebar-border);
     transition: background-color 0.3s ease;
+    /* REMOVIDO: backdrop-filter para manter cor sólida */
 }
 
 .nav-menu {
@@ -159,8 +168,12 @@ body[data-theme="dark"] .app {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* ATUALIZADO: Item ativo com fundo azul e contorno */
 .nav-link.active {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--sidebar-bg-selected);
+    border-radius: 12px;
+    border: 2px solid #90EE90; /* Contorno verde claro */
+    box-shadow: 0 0 8px rgba(144, 238, 144, 0.3); /* Glow sutil */
 }
 
 .nav-icon {
@@ -201,10 +214,10 @@ body[data-theme="dark"] .app {
     padding-bottom: 20px;
 }
 
-/* --- Barra de Pesquisa --- */
+/* --- Barra de Pesquisa ATUALIZADA --- */
 .search-bar {
-    background-color: var(--input-bg);
-    border: 1px solid var(--post-border);
+    background-color: var(--search-bg);
+    border: 1px solid var(--search-border);
     border-radius: 25px;
     padding: 12px 20px;
     margin: 10px 20px;
@@ -212,6 +225,12 @@ body[data-theme="dark"] .app {
     align-items: center;
     gap: 10px;
     transition: background-color 0.3s, border-color 0.3s;
+    backdrop-filter: blur(10px); /* Efeito glass para azul esverdeado */
+}
+
+.search-bar:focus-within {
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .search-input {
@@ -246,6 +265,12 @@ body[data-theme="dark"] .app {
     margin-right: 20px;
     height: auto; /* ADICIONADO: permite altura dinâmica */
     overflow: visible; /* ADICIONADO: garante visibilidade */
+    backdrop-filter: blur(10px); /* ADICIONADO: efeito glass */
+}
+
+.post:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(47, 79, 79, 0.3);
 }
 
 .post-header {
@@ -343,11 +368,12 @@ body[data-theme="dark"] .app {
     gap: 5px;
     padding: 5px 10px;
     border-radius: 20px;
-    transition: color 0.2s;
+    transition: color 0.2s, background-color 0.2s;
 }
 
 .action-btn:hover {
     color: var(--post-text-color);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .action-btn.liked {
@@ -359,7 +385,7 @@ body[data-theme="dark"] .app {
     stroke: #ff4444;
 }
 
-/* --- Botão Flutuante --- */
+/* --- Botão Flutuante ATUALIZADO --- */
 .floating-buttons {
     position: fixed;
     bottom: 90px;
@@ -371,22 +397,24 @@ body[data-theme="dark"] .app {
 }
 
 .post-btn {
-    background-color: #ffffff;
-    color: #275736;
-    border: 2px solid #275736;
+    background-color: #275736; /* Verde igual ao fundo */
+    color: #ffffff;
+    border: 2px solid #90EE90; /* Contorno verde claro */
     width: 50px;
     height: 50px;
     border-radius: 50%;
     font-size: 24px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(39, 87, 54, 0.4);
     transition: all 0.2s;
 }
 
 .post-btn:hover {
-    background-color: #f0f0f0;
+    background-color: #1f4529; /* Verde mais escuro no hover */
+    border-color: #98FB98; /* Contorno mais claro no hover */
     transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(39, 87, 54, 0.6);
 }
 
 /* --- Seções de Tendências ATUALIZADAS --- */
@@ -411,6 +439,7 @@ body[data-theme="dark"] .app {
     transition: background-color 0.3s, border-color 0.3s, color 0.3s;
     height: auto; /* ADICIONADO: permite altura dinâmica */
     overflow: visible; /* ADICIONADO */
+    backdrop-filter: blur(10px); /* ADICIONADO: efeito glass */
 }
 
 .section-title {
@@ -462,16 +491,17 @@ body[data-theme="dark"] .app {
 .follow-btn {
     background-color: var(--follow-btn-bg);
     color: white;
-    border: none;
+    border: 2px solid var(--follow-btn-border); /* Contorno verde claro */
     padding: 4px 12px;
     border-radius: 16px;
     font-size: 11px;
     cursor: pointer;
-    transition: background-color 0.2s, color 0.3s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.3s;
 }
 
 .follow-btn:hover {
-    background-color: #1e4329;
+    background-color: #1f4529; /* Verde mais escuro no hover */
+    border-color: #98FB98; /* Contorno mais claro no hover */
 }
 
 /* ADICIONADO: Classes utilitárias para rolagem */
@@ -535,6 +565,12 @@ body[data-theme="dark"] .app {
     .floating-buttons {
         right: calc(50% - 300px - 10px);
     }
+}
+
+/* Contorno específico para item ativo no tema escuro */
+body[data-theme="dark"] .nav-link.active {
+    border: 2px solid rgba(255, 255, 255, 0.4); /* Contorno branco translúcido */
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.2); /* Glow branco sutil */
 }
 
 /* ADICIONADO: Para garantir que componentes React não limitem altura */

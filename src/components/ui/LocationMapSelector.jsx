@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Target, Navigation, X, Check } from 'lucide-react';
+import { MapPin, Navigation, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocation }) => {
@@ -112,7 +112,7 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
       // Adicionar novo marcador
       const marker = window.L.marker([lat, lng])
         .addTo(map)
-        .bindPopup('📍 Local selecionado');
+        .bindPopup(`📍 Local selecionado`);
 
       setSelectedMarker(marker);
 
@@ -255,22 +255,35 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
 
         {/* Controles */}
         <div className="location-controls">
-          <button 
-            onClick={getCurrentLocation} 
-            disabled={loadingCurrentLocation}
-            className="current-location-btn"
-          >
-            {loadingCurrentLocation ? (
-              <div className="spinner" />
-            ) : (
-              <Navigation size={16} />
+          <div className="controls-left">
+            <button 
+              onClick={getCurrentLocation} 
+              disabled={loadingCurrentLocation}
+              className="current-location-btn"
+            >
+              {loadingCurrentLocation ? (
+                <div className="spinner" />
+              ) : (
+                <Navigation size={16} />
+              )}
+              {loadingCurrentLocation ? 'Obtendo...' : 'Usar Minha Localização'}
+            </button>
+            
+            {/* Botão Confirmar aparece ao lado quando há localização selecionada */}
+            {selectedLocation && (
+              <button 
+                onClick={handleConfirm} 
+                className="confirm-btn-inline"
+              >
+                <Check size={16} />
+                Confirmar Este Local
+              </button>
             )}
-            {loadingCurrentLocation ? 'Obtendo...' : 'Usar Minha Localização'}
-          </button>
+          </div>
           
           <div className="location-info">
             {selectedLocation ? (
-              <div>
+              <div className="selected-info">
                 <MapPin size={16} />
                 <span>{selectedLocation.name}</span>
               </div>
@@ -323,11 +336,11 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
         }
 
         .location-modal {
-          background: white;
+          background: #2F4F4F;
           border-radius: 12px;
           width: 100%;
-          max-width: 600px;
-          max-height: 90vh;
+          max-width: 400px;
+          max-height: 80vh;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -335,7 +348,7 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
 
         .location-modal-header {
           display: flex;
-          justify-content: space-between;
+          justify-content: center;
           align-items: center;
           padding: 20px;
           border-bottom: 1px solid #eee;
@@ -344,7 +357,7 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
         .location-modal-header h3 {
           margin: 0;
           font-size: 18px;
-          color: #333;
+          color: #fff;
         }
 
         .close-btn {
@@ -363,10 +376,17 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
         .location-controls {
           padding: 16px 20px;
           display: flex;
-          justify-content: space-between;
+          justify-content: center;
           align-items: center;
-          background: #f8f9fa;
-          border-bottom: 1px solid #eee;
+          background: #2F4F4F;
+          border-bottom: 1px solid #2F4F4F;
+          gap: 16px;
+        }
+
+        .controls-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .current-location-btn {
@@ -375,12 +395,13 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
           gap: 8px;
           background: #4285f4;
           color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 6px;
+          border: 2px solid black;
+          padding: 8px 10px;
+          border-radius: 5px;
           cursor: pointer;
           font-size: 14px;
           transition: background 0.2s;
+          white-space: nowrap;
         }
 
         .current-location-btn:hover:not(:disabled) {
@@ -392,12 +413,55 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
           cursor: not-allowed;
         }
 
+        .confirm-btn-inline {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #4CAF50;
+          color: white;
+          border: 2px solid black;
+          padding: 5px 10px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s;
+          animation: slideInFromRight 0.3s ease-out;
+          white-space: nowrap;
+        }
+
+        .confirm-btn-inline:hover {
+          background: #45a049;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+
+        @keyframes slideInFromRight {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
         .location-info {
           display: flex;
           align-items: center;
           gap: 8px;
           color: #666;
           font-size: 14px;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .selected-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #4CAF50;
+          font-weight: 500;
         }
 
         .map-container {
@@ -495,8 +559,14 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
             align-items: stretch;
           }
           
+          .controls-left {
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+          
           .location-info {
             justify-content: center;
+            text-align: center;
           }
         }
       `}</style>

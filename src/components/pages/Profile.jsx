@@ -659,27 +659,32 @@ function Profile() {
         </button>
       </div>
 
+      {/* Modal de Edição com Estilo do Modal de Post */}
       {isEditModalOpen && (
-        <div className="edit-modal-overlay" onClick={closeEditModal}>
-          <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="edit-modal-header">
-              <h2>Editar Perfil</h2>
-              <button className="modal-close-btn" onClick={closeEditModal}>
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="edit-modal-content">
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-body">
               <div className="form-group">
                 <label htmlFor="edit-name">Nome</label>
                 <input
                   type="text"
                   id="edit-name"
-                  className="form-input"
                   value={editingProfile.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Seu nome completo"
                   maxLength={50}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
                 />
               </div>
               
@@ -688,11 +693,22 @@ function Profile() {
                 <input
                   type="text"
                   id="edit-handle"
-                  className="form-input"
                   value={editingProfile.handle}
                   onChange={(e) => handleInputChange('handle', e.target.value)}
                   placeholder="@seu_usuario"
                   maxLength={20}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
                 />
               </div>
               
@@ -700,14 +716,31 @@ function Profile() {
                 <label htmlFor="edit-bio">Biografia</label>
                 <textarea
                   id="edit-bio"
-                  className="form-textarea"
                   value={editingProfile.bio}
                   onChange={(e) => handleInputChange('bio', e.target.value)}
                   placeholder="Conte um pouco sobre você..."
                   maxLength={200}
-                  rows={4}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    resize: 'none'
+                  }}
                 />
-                <div className="char-count">
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: 'rgba(255, 255, 255, 0.6)', 
+                  textAlign: 'right', 
+                  marginTop: '4px' 
+                }}>
                   {editingProfile.bio.length}/200
                 </div>
               </div>
@@ -717,11 +750,22 @@ function Profile() {
                 <input
                   type="text"
                   id="edit-location"
-                  className="form-input"
                   value={editingProfile.location}
                   onChange={(e) => handleInputChange('location', e.target.value)}
                   placeholder="Sua escola ou instituição"
                   maxLength={50}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
                 />
               </div>
               
@@ -730,24 +774,73 @@ function Profile() {
                 <input
                   type="url"
                   id="edit-website"
-                  className="form-input"
                   value={editingProfile.website}
                   onChange={(e) => handleInputChange('website', e.target.value)}
                   placeholder="https://seusite.com"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
                 />
               </div>
             </div>
             
-            <div className="edit-modal-footer">
-              <button className="cancel-btn" onClick={closeEditModal} disabled={isSaving}>
+            <div className="modal-footer">
+              <button 
+                onClick={closeEditModal} 
+                disabled={isSaving}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  flex: '1',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  minWidth: 'auto'
+                }}
+              >
                 Cancelar
               </button>
-              <button className="save-btn" onClick={saveProfile} disabled={isSaving}>
+              <button 
+                onClick={saveProfile} 
+                disabled={isSaving}
+                style={{
+                  background: '#90EE90',
+                  color: '#2F4F4F',
+                  border: '1px solid #90EE90',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  flex: '1',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  minWidth: 'auto',
+                  boxShadow: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  opacity: isSaving ? 0.6 : 1
+                }}
+              >
                 {isSaving ? (
-                  <>Salvando...</>
+                  'Salvando...'
                 ) : (
                   <>
-                    <Save size={16} style={{ marginRight: '8px' }} />
+                    <Save size={16} />
                     Salvar
                   </>
                 )}
@@ -852,6 +945,174 @@ function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Estilos do Modal no mesmo padrão do modal de post */}
+      <style jsx>{`
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: modalOverlayIn 0.3s ease-out;
+        }
+
+        @keyframes modalOverlayIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        /* Tema Claro - Azul esverdeado */
+        .modal-content {
+          background: #2F4F4F;
+          border-radius: 16px;
+          padding: 24px;
+          width: 90%;
+          max-width: 400px;
+          animation: modalSlideIn 0.3s ease-out;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+          max-height: 85vh;
+          overflow-y: auto;
+        }
+
+        /* Tema Escuro - Fundo escuro */
+        body[data-theme="dark"] .modal-content {
+          background: #1a1a1a;
+          border: 1px solid #333333;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-body {
+          padding: 0;
+        }
+
+        .modal-footer {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 0;
+          border: none;
+          margin-top: 20px;
+        }
+
+        .form-group {
+          margin-bottom: 16px;
+        }
+
+        /* Labels - Tema Claro */
+        .form-group label {
+          font-weight: 600;
+          display: block;
+          color: #FFFFFF;
+          margin-bottom: 8px;
+          font-size: 16px;
+        }
+
+        /* Labels - Tema Escuro */
+        body[data-theme="dark"] .form-group label {
+          color: #ffffff;
+        }
+
+        /* Inputs - Tema Claro */
+        .form-group input,
+        .form-group textarea {
+          border-color: rgba(255, 255, 255, 0.3) !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: #FFFFFF !important;
+        }
+
+        /* Inputs - Tema Escuro */
+        body[data-theme="dark"] .form-group input,
+        body[data-theme="dark"] .form-group textarea {
+          border-color: #333333 !important;
+          background: #000000 !important;
+          color: #ffffff !important;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+          border-color: #90EE90 !important;
+          box-shadow: 0 0 0 2px rgba(144, 238, 144, 0.2) !important;
+        }
+
+        /* Placeholders - Tema Claro */
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+          color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        /* Placeholders - Tema Escuro */
+        body[data-theme="dark"] .form-group input::placeholder,
+        body[data-theme="dark"] .form-group textarea::placeholder {
+          color: #aaaaaa !important;
+        }
+
+        /* Contador de caracteres - Tema Claro */
+        .form-group div {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Contador de caracteres - Tema Escuro */
+        body[data-theme="dark"] .form-group div {
+          color: #aaaaaa;
+        }
+
+        /* Botão Cancelar - Tema Claro */
+        .modal-footer button:first-child {
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: #FFFFFF !important;
+          border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        }
+
+        /* Botão Cancelar - Tema Escuro */
+        body[data-theme="dark"] .modal-footer button:first-child {
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: #ffffff !important;
+          border: 1px solid #333333 !important;
+        }
+
+        /* Botão Salvar - Tema Claro */
+        .modal-footer button:last-child {
+          background: #275736 !important;
+          color: #ffffff !important;
+          border: 1px solid #90EE90 !important;
+        }
+
+        /* Botão Salvar - Tema Escuro */
+        body[data-theme="dark"] .modal-footer button:last-child {
+          background: #4CAF50 !important;
+          color: #ffffff !important;
+          border: 1px solid #4CAF50 !important;
+        }
+
+        .modal-footer button:hover:not(:disabled) {
+          opacity: 0.9;
+        }
+
+        @media (max-width: 640px) {
+          .modal-content {
+            margin: 20px;
+            width: calc(100% - 40px);
+            max-width: 400px;
+          }
+        }
+      `}</style>
     </main>
   );
 }

@@ -473,22 +473,29 @@ function Home() {
       {newPostModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Novo Post</h3>
-              <button onClick={closeModal} className="close-btn">
-                <X size={20} />
-              </button>
-            </div>
-            
             <div className="modal-body">
               <div className="form-group">
-                <label>O que você observou hoje?</label>
+                <label htmlFor="observacao">O que você observou hoje?</label>
                 <textarea
+                  id="observacao"
                   value={newPostData.content}
                   onChange={(e) => setNewPostData({...newPostData, content: e.target.value})}
-                  placeholder="Compartilhe sua descoberta na natureza..."
+                  placeholder="Descreva sua observação..."
                   rows={3}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', resize: 'none' }}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
                 />
               </div>
 
@@ -498,68 +505,34 @@ function Home() {
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <MediaUpload onMediaUpdate={handleMediaUpdate} maxFiles={4} compact={true} />
                   {postMedia.length > 0 && (
-                    <span style={{ fontSize: '12px', color: '#666' }}>
+                    <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>
                       {postMedia.length} arquivo{postMedia.length > 1 ? 's' : ''} selecionado{postMedia.length > 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Localização com seletor de mapa */}
+              {/* Localização com dois botões */}
               <div className="form-group">
                 <label>Localização</label>
-                <div className="location-display" style={{
-                  padding: '10px',
-                  background: '#f8f9fa',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  minHeight: '40px'
-                }}>
-                  {currentLocation ? (
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                          <circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        <span style={{ color: '#333', fontWeight: '500' }}>{currentLocation.name}</span>
-                        <span style={{ 
-                          fontSize: '10px', 
-                          background: '#e3f2fd', 
-                          color: '#1976d2', 
-                          padding: '2px 6px', 
-                          borderRadius: '10px' 
-                        }}>
-                          {currentLocation.source}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.3' }}>
-                        {currentLocation.fullAddress}
-                        {currentLocation.accuracy && (
-                          <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                            Precisão: {currentLocation.accuracy}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleOpenMapSelector}
-                        style={{
-                          marginTop: '8px',
-                          background: 'none',
-                          border: '1px solid #ddd',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          color: '#666'
-                        }}
-                      >
-                        Alterar no mapa
-                      </button>
+                {currentLocation ? (
+                  <div className="location-selected">
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span style={{ color: '#90EE90' }}>📍</span>
+                      <span style={{ color: '#FFFFFF', fontSize: '14px' }}>
+                        {currentLocation.name}
+                      </span>
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         type="button"
                         onClick={handleOpenMapSelector}
@@ -571,15 +544,15 @@ function Home() {
                           color: 'white',
                           border: 'none',
                           padding: '8px 12px',
-                          borderRadius: '4px',
+                          borderRadius: '8px',
                           fontSize: '12px',
-                          cursor: 'pointer'
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
                         }}
                       >
-                        <Map size={14} />
-                        Selecionar no Mapa
+                        🗺️ Alterar Local
                       </button>
-                      
                       <button
                         type="button"
                         onClick={getQuickLocation}
@@ -592,41 +565,106 @@ function Home() {
                           color: 'white',
                           border: 'none',
                           padding: '8px 12px',
-                          borderRadius: '4px',
+                          borderRadius: '8px',
                           fontSize: '12px',
+                          fontWeight: '500',
                           cursor: locationLoading ? 'not-allowed' : 'pointer',
-                          opacity: locationLoading ? 0.6 : 1
+                          opacity: locationLoading ? 0.6 : 1,
+                          transition: 'all 0.2s ease'
                         }}
                       >
                         {locationLoading ? (
-                          <div style={{ 
-                            width: '14px', 
-                            height: '14px', 
-                            border: '2px solid transparent', 
-                            borderTop: '2px solid white', 
-                            borderRadius: '50%', 
-                            animation: 'spin 1s linear infinite' 
-                          }} />
+                          <>🔄 Obtendo...</>
                         ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
-                          </svg>
+                          <>📍 GPS Atual</>
                         )}
-                        GPS Atual
                       </button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="location-buttons" style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    gap: '8px',
+                    flexWrap: 'wrap'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={handleOpenMapSelector}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        flex: '1',
+                        minWidth: '140px'
+                      }}
+                    >
+                      🗺️ Selecionar no Mapa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={getQuickLocation}
+                      disabled={locationLoading}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#2196F3',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: locationLoading ? 'not-allowed' : 'pointer',
+                        opacity: locationLoading ? 0.6 : 1,
+                        transition: 'all 0.2s ease',
+                        flex: '1',
+                        minWidth: '100px'
+                      }}
+                    >
+                      {locationLoading ? (
+                        <>🔄 Obtendo...</>
+                      ) : (
+                        <>📍 GPS Atual</>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
-                <label>Tags</label>
+                <label htmlFor="tags">Tags</label>
                 <input
                   type="text"
+                  id="tags"
                   value={newPostData.tags}
                   onChange={(e) => setNewPostData({...newPostData, tags: e.target.value})}
                   placeholder="Ex: natureza, aves, manhã, trilha"
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  }}
                 />
               </div>
             </div>
@@ -682,11 +720,11 @@ function Home() {
         }
 
         .modal-content {
-          background: white;
-          border-radius: 12px;
+          background: #2F4F4F;
+          border-radius: 30px;
           padding: 0;
           width: 90%;
-          max-width: 420px;
+          max-width: 400px;
           max-height: 80vh;
           overflow-y: auto;
         }
@@ -705,7 +743,7 @@ function Home() {
 
         .modal-footer {
           display: flex;
-          justify-content: flex-end;
+          justify-content: space-evenly;
           gap: 10px;
           padding: 20px;
           border-top: 1px solid #eee;
@@ -727,14 +765,15 @@ function Home() {
         }
 
         .form-group {
-          margin-bottom: 12px;
+          margin-bottom: 3px;
         }
 
         .form-group label {
           display: block;
-          margin-bottom: 5px;
-          font-weight: 500;
-          color: #333;
+          margin-bottom: 2px;
+          font-weight: 600;
+          color: #ffffff;
+          font-size: 16px;
         }
 
         .species-tags {
@@ -775,9 +814,9 @@ function Home() {
         }
 
         .publish-btn {
-          background: linear-gradient(135deg, #4CAF50, #45a049);
+          background: #275736;
           color: white;
-          border: none;
+          border:  #90EE90 2px solid;
           padding: 12px 24px;
           border-radius: 8px;
           cursor: pointer;
