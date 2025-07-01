@@ -695,6 +695,7 @@ function Home() {
         onClose={() => setShowMapSelector(false)}
         onLocationSelect={handleLocationSelect}
         initialLocation={currentLocation?.coordinates}
+        isDarkMode={isDarkMode}
       />
 
       {/* Botão flutuante para novo post */}
@@ -720,7 +721,7 @@ function Home() {
         }
 
         .modal-content {
-          background: #2F4F4F;
+          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};;
           border-radius: 30px;
           padding: 0;
           width: 90%;

@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Navigation, X, Check } from 'lucide-react';
+import { Icons } from './Icons';
 import toast from 'react-hot-toast';
 
-const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocation }) => {
+const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, isDarkMode }) => {
   const mapRef = useRef(null);
   const [map, setMap] = useState(null);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [currentLocationMarker, setCurrentLocationMarker] = useState(null);
-  const [selectedMarker, setSelectedMarker] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [currentMarker, setCurrentMarker] = useState(null);
 
   // Inicializar mapa quando modal abre
   useEffect(() => {
@@ -18,14 +16,20 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
     }
   }, [isOpen]);
 
+  // Obter localização atual quando modal abre
+  useEffect(() => {
+    if (isOpen && map && !selectedLocation) {
+      getCurrentLocationOnOpen();
+    }
+  }, [isOpen, map]);
+
   // Limpar mapa quando modal fecha
   useEffect(() => {
     if (!isOpen && map) {
       map.remove();
       setMap(null);
       setSelectedLocation(null);
-      setSelectedMarker(null);
-      setCurrentLocationMarker(null);
+      setCurrentMarker(null);
     }
   }, [isOpen, map]);
 
@@ -33,14 +37,14 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
     try {
       setLoading(true);
 
-      // Verificar se Leaflet está disponível, senão carregar
+      // Carregar Leaflet se não estiver disponível
       if (typeof window.L === 'undefined') {
         await loadLeaflet();
       }
 
       // Coordenadas padrão (Brasília)
-      const defaultLat = initialLocation?.latitude || -15.7939;
-      const defaultLng = initialLocation?.longitude || -47.8828;
+      const defaultLat = -15.7939;
+      const defaultLng = -47.8828;
 
       // Criar mapa
       const newMap = window.L.map(mapRef.current, {
@@ -50,25 +54,16 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
         attributionControl: true
       });
 
-      // Adicionar tiles do OpenStreetMap
+      // Adicionar camada de mapa
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(newMap);
 
-      // Evento de clique no mapa
+      // Adicionar evento de clique no mapa
       newMap.on('click', handleMapClick);
 
       setMap(newMap);
-      
-      // Se há localização inicial, mostrar no mapa
-      if (initialLocation) {
-        const marker = window.L.marker([initialLocation.latitude, initialLocation.longitude])
-          .addTo(newMap)
-          .bindPopup('Localização atual');
-        setCurrentLocationMarker(marker);
-      }
-
     } catch (error) {
       console.error('Erro ao inicializar mapa:', error);
       toast.error('Erro ao carregar mapa');
@@ -79,7 +74,7 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
 
   const loadLeaflet = () => {
     return new Promise((resolve, reject) => {
-      // Carregar CSS do Leaflet
+      // Carregar CSS
       if (!document.querySelector('link[href*="leaflet.css"]')) {
         const cssLink = document.createElement('link');
         cssLink.rel = 'stylesheet';
@@ -87,7 +82,7 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
         document.head.appendChild(cssLink);
       }
 
-      // Carregar JS do Leaflet
+      // Carregar JS
       if (!document.querySelector('script[src*="leaflet.js"]')) {
         const script = document.createElement('script');
         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
@@ -100,144 +95,174 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
     });
   };
 
-  const handleMapClick = async (e) => {
-    const { lat, lng } = e.latlng;
-    
-    try {
-      // Remover marcador anterior
-      if (selectedMarker) {
-        map.removeLayer(selectedMarker);
-      }
-
-      // Adicionar novo marcador
-      const marker = window.L.marker([lat, lng])
-        .addTo(map)
-        .bindPopup(`📍 Local selecionado`);
-
-      setSelectedMarker(marker);
-
-      // Obter nome do local
-      const locationName = await getLocationName(lat, lng);
-      
-      setSelectedLocation({
-        latitude: lat,
-        longitude: lng,
-        name: locationName,
-        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-      });
-
-      // Atualizar popup do marcador
-      marker.bindPopup(`📍 ${locationName}`).openPopup();
-
-    } catch (error) {
-      console.error('Erro ao selecionar localização:', error);
-    }
-  };
-
-  const getCurrentLocation = async () => {
+  const getCurrentLocationOnOpen = () => {
     if (!navigator.geolocation) {
-      toast.error('Geolocalização não suportada');
+      // Se não tem GPS, usar localização padrão (Brasília)
+      const defaultLocation = {
+        latitude: -15.7939,
+        longitude: -47.8828,
+        name: 'Brasília, DF',
+        address: 'Brasília, DF'
+      };
+      setSelectedLocation(defaultLocation);
+      addMarkerToMap(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.name);
       return;
     }
-
-    setLoadingCurrentLocation(true);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         
-        // Centralizar mapa na localização atual
-        map.setView([latitude, longitude], 16);
-        
-        // Remover marcador anterior da localização atual
-        if (currentLocationMarker) {
-          map.removeLayer(currentLocationMarker);
-        }
-
-        // Adicionar marcador da localização atual
-        const marker = window.L.marker([latitude, longitude], {
-          icon: window.L.divIcon({
-            className: 'current-location-marker',
-            html: '<div style="background: #4285f4; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          })
-        }).addTo(map);
-
-        setCurrentLocationMarker(marker);
-
-        // NOVO: Automaticamente selecionar esta localização
         try {
           const locationName = await getLocationName(latitude, longitude);
-          
-          // Remover marcador de seleção anterior se existir
-          if (selectedMarker) {
-            map.removeLayer(selectedMarker);
-          }
-
-          // Criar marcador de seleção no mesmo local
-          const selectionMarker = window.L.marker([latitude, longitude])
-            .addTo(map)
-            .bindPopup(`📍 ${locationName} (Sua localização)`);
-
-          setSelectedMarker(selectionMarker);
-          
-          // Definir como local selecionado
-          setSelectedLocation({
+          const locationData = {
             latitude,
             longitude,
             name: locationName,
-            address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-          });
-
-          marker.bindPopup(`📱 Sua localização atual: ${locationName}`);
-          toast.success('Localização atual selecionada!');
+            address: locationName
+          };
+          
+          setSelectedLocation(locationData);
+          
+          // Centralizar mapa na localização
+          map.setView([latitude, longitude], 16);
+          
+          // Adicionar marcador
+          addMarkerToMap(latitude, longitude, locationName);
+          
         } catch (error) {
-          console.error('Erro ao obter nome da localização:', error);
-          toast.error('Erro ao obter detalhes da localização');
+          console.error('Erro ao obter localização:', error);
+          // Usar localização padrão em caso de erro
+          const defaultLocation = {
+            latitude: -15.7939,
+            longitude: -47.8828,
+            name: 'Brasília, DF',
+            address: 'Brasília, DF'
+          };
+          setSelectedLocation(defaultLocation);
+          addMarkerToMap(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.name);
         }
-
-        setLoadingCurrentLocation(false);
       },
       (error) => {
-        setLoadingCurrentLocation(false);
-        toast.error('Erro ao obter localização atual');
+        console.error('Erro de geolocalização:', error);
+        // Usar localização padrão se GPS falhar
+        const defaultLocation = {
+          latitude: -15.7939,
+          longitude: -47.8828,
+          name: 'Brasília, DF',
+          address: 'Brasília, DF'
+        };
+        setSelectedLocation(defaultLocation);
+        addMarkerToMap(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.name);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      }
     );
   };
 
-  const getLocationName = async (lat, lng) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=pt-BR`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        const address = data.address || {};
-        
-        return address.village || 
-               address.town || 
-               address.suburb || 
-               address.neighbourhood || 
-               address.city || 
-               'Local selecionado';
-      }
-    } catch (error) {
-      console.error('Erro ao obter nome do local:', error);
-    }
+  const handleMapClick = async (e) => {
+    const { lat, lng } = e.latlng;
     
-    return 'Local selecionado';
+    try {
+      // Obter nome do novo local
+      const locationName = await getLocationName(lat, lng);
+      
+      const newLocation = {
+        latitude: lat,
+        longitude: lng,
+        name: locationName,
+        address: locationName
+      };
+      
+      setSelectedLocation(newLocation);
+      
+      // Mover marcador para nova posição
+      addMarkerToMap(lat, lng, locationName);
+      
+    } catch (error) {
+      console.error('Erro ao selecionar nova localização:', error);
+    }
+  };
+
+  const addMarkerToMap = (lat, lng, name) => {
+    // Remover marcador anterior se existir
+    if (currentMarker) {
+      map.removeLayer(currentMarker);
+    }
+
+    // Criar novo marcador
+    const marker = window.L.marker([lat, lng], {
+      draggable: true // Permitir arrastar o marcador
+    }).addTo(map);
+
+    // Popup com nome do local
+    marker.bindPopup(`📍 ${name}`).openPopup();
+
+    // Evento quando arrastar o marcador
+    marker.on('dragend', async (e) => {
+      const position = e.target.getLatLng();
+      try {
+        const newLocationName = await getLocationName(position.lat, position.lng);
+        const draggedLocation = {
+          latitude: position.lat,
+          longitude: position.lng,
+          name: newLocationName,
+          address: newLocationName
+        };
+        
+        setSelectedLocation(draggedLocation);
+        marker.bindPopup(`📍 ${newLocationName}`).openPopup();
+      } catch (error) {
+        console.error('Erro ao obter nome da nova posição:', error);
+      }
+    });
+
+    setCurrentMarker(marker);
   };
 
   const handleConfirm = () => {
     if (selectedLocation) {
       onLocationSelect(selectedLocation);
       onClose();
+      toast.success(`Localização confirmada: ${selectedLocation.name}`, {
+        icon: '✅'
+      });
     } else {
-      toast.error('Selecione um local no mapa primeiro');
+      toast.error('Nenhuma localização selecionada');
     }
+  };
+
+  const getLocationName = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1&accept-language=pt-BR`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const address = data.address || {};
+        
+        // Priorizar nomes mais específicos
+        return address.village || 
+               address.town || 
+               address.suburb || 
+               address.neighbourhood || 
+               address.city || 
+               address.municipality ||
+               'Localização atual';
+      }
+    } catch (error) {
+      console.error('Erro ao obter nome do local:', error);
+    }
+    
+    return 'Localização atual';
+  };
+
+  const handleCancel = () => {
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -246,234 +271,111 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
     <div className="location-modal-overlay">
       <div className="location-modal">
         {/* Header */}
-        <div className="location-modal-header">
+        <div className="location-header">
+          <Icons.Location size={20} style={{ color: '#90EE90', marginRight: '8px' }} />
           <h3>Selecionar Localização</h3>
-          <button onClick={onClose} className="close-btn">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Controles */}
-        <div className="location-controls">
-          <div className="controls-left">
-            <button 
-              onClick={getCurrentLocation} 
-              disabled={loadingCurrentLocation}
-              className="current-location-btn"
-            >
-              {loadingCurrentLocation ? (
-                <div className="spinner" />
-              ) : (
-                <Navigation size={16} />
-              )}
-              {loadingCurrentLocation ? 'Obtendo...' : 'Usar Minha Localização'}
-            </button>
-            
-            {/* Botão Confirmar aparece ao lado quando há localização selecionada */}
-            {selectedLocation && (
-              <button 
-                onClick={handleConfirm} 
-                className="confirm-btn-inline"
-              >
-                <Check size={16} />
-                Confirmar Este Local
-              </button>
-            )}
-          </div>
-          
-          <div className="location-info">
-            {selectedLocation ? (
-              <div className="selected-info">
-                <MapPin size={16} />
-                <span>{selectedLocation.name}</span>
-              </div>
-            ) : (
-              <span>Clique no mapa para selecionar um local</span>
-            )}
-          </div>
         </div>
 
         {/* Mapa */}
         <div className="map-container">
           {loading && (
             <div className="map-loading">
-              <div className="spinner" />
+              <div className="loading-spinner"></div>
               <span>Carregando mapa...</span>
             </div>
           )}
           <div ref={mapRef} className="map" />
+          
+          {/* Instrução para o usuário */}
+          {!loading && (
+            <div className="map-instruction">
+              <Icons.Location size={16} />
+              <span>Clique no mapa ou arraste o pin para mudar a localização</span>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="location-modal-footer">
-          <button onClick={onClose} className="cancel-btn">
+        {/* Botões */}
+        <div className="bottom-buttons">
+          <button 
+            onClick={handleCancel}
+            className="cancel-button"
+          >
+            <Icons.Close size={18} />
             Cancelar
           </button>
+          
           <button 
-            onClick={handleConfirm} 
+            onClick={handleConfirm}
             disabled={!selectedLocation}
-            className="confirm-btn"
+            className="confirm-button"
           >
-            <Check size={16} />
+            <Icons.Check size={18} />
             Confirmar Local
           </button>
         </div>
       </div>
 
       <style jsx>{`
+        /* Modal Overlay */
         .location-modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
+          background: rgba(0, 0, 0, 0.75);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 2000;
           padding: 20px;
+          backdrop-filter: blur(4px);
         }
 
+        /* Modal Container */
         .location-modal {
-          background: #2F4F4F;
-          border-radius: 12px;
+          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};
+          border-radius: 16px;
           width: 100%;
-          max-width: 400px;
-          max-height: 80vh;
+          max-width: 420px;
+          max-height: 85vh;
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .location-modal-header {
-          display: flex;
-          justify-content: center;
-          align-items: center;
+        /* Header */
+        .location-header {
+          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};
           padding: 20px;
-          border-bottom: 1px solid #eee;
-        }
-
-        .location-modal-header h3 {
-          margin: 0;
-          font-size: 18px;
-          color: #fff;
-        }
-
-        .close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #666;
-          padding: 4px;
-          border-radius: 4px;
-        }
-
-        .close-btn:hover {
-          background: #f5f5f5;
-        }
-
-        .location-controls {
-          padding: 16px 20px;
           display: flex;
+          align-items: center;
           justify-content: center;
-          align-items: center;
-          background: #2F4F4F;
-          border-bottom: 1px solid #2F4F4F;
-          gap: 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .controls-left {
-          display: flex;
-          align-items: center;
-          gap: 12px;
+        .location-header h3 {
+          margin: 0;
+          color: #ffffff;
+          font-size: 18px;
+          font-weight: 600;
         }
 
-        .current-location-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #4285f4;
-          color: white;
-          border: 2px solid black;
-          padding: 8px 10px;
-          border-radius: 5px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: background 0.2s;
-          white-space: nowrap;
-        }
-
-        .current-location-btn:hover:not(:disabled) {
-          background: #3367d6;
-        }
-
-        .current-location-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .confirm-btn-inline {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #4CAF50;
-          color: white;
-          border: 2px solid black;
-          padding: 5px 10px;
-          border-radius: 5px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.2s;
-          animation: slideInFromRight 0.3s ease-out;
-          white-space: nowrap;
-        }
-
-        .confirm-btn-inline:hover {
-          background: #45a049;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
-        }
-
-        @keyframes slideInFromRight {
-          from {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        .location-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #666;
-          font-size: 14px;
-          flex: 1;
-          min-width: 0;
-        }
-
-        .selected-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #4CAF50;
-          font-weight: 500;
-        }
-
+        /* Map Container */
         .map-container {
           flex: 1;
           position: relative;
-          min-height: 400px;
+          min-height: 350px;
+          background: #f0f0f0;
         }
 
         .map {
           width: 100%;
           height: 100%;
-          min-height: 400px;
+          min-height: 350px;
         }
 
         .map-loading {
@@ -486,61 +388,116 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          background: white;
+          background: #ffffff;
           z-index: 1000;
-          gap: 12px;
-        }
-
-        .location-modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-          padding: 20px;
-          border-top: 1px solid #eee;
-        }
-
-        .cancel-btn {
-          background: none;
-          border: 1px solid #ddd;
-          padding: 10px 20px;
-          border-radius: 6px;
-          cursor: pointer;
+          gap: 16px;
           color: #666;
         }
 
-        .cancel-btn:hover {
-          background: #f5f5f5;
-        }
-
-        .confirm-btn {
+        .map-instruction {
+          position: absolute;
+          top: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 12px;
           display: flex;
           align-items: center;
+          gap: 6px;
+          z-index: 1000;
+          backdrop-filter: blur(4px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Bottom Buttons */
+        .bottom-buttons {
+          display: flex;
+          gap: 12px;
+          padding: 20px;
+          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Cancel Button */
+        .cancel-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
           gap: 8px;
-          background: #4CAF50;
+          flex: 1;
+          background: #dc3545;
           color: white;
           border: none;
-          padding: 10px 20px;
-          border-radius: 6px;
+          padding: 14px 20px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          transition: background 0.2s;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
         }
 
-        .confirm-btn:hover:not(:disabled) {
-          background: #45a049;
+        .cancel-button:hover:not(:disabled) {
+          background: #c82333;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
         }
 
-        .confirm-btn:disabled {
-          background: #ccc;
+        .cancel-button:disabled {
+          opacity: 0.6;
           cursor: not-allowed;
+          transform: none;
         }
 
-        .spinner {
-          width: 16px;
-          height: 16px;
+        /* Location Button - agora é Confirm Button */
+        .confirm-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          flex: 1;
+          background: #28a745;
+          color: white;
+          border: none;
+          padding: 14px 20px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        }
+
+        .confirm-button:hover:not(:disabled) {
+          background: #218838;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .confirm-button:disabled {
+          background: #6c757d;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        /* Loading Spinners */
+        .loading-spinner,
+        .button-spinner {
+          width: 20px;
+          height: 20px;
           border: 2px solid transparent;
           border-top: 2px solid currentColor;
           border-radius: 50%;
           animation: spin 1s linear infinite;
+        }
+
+        .button-spinner {
+          width: 16px;
+          height: 16px;
         }
 
         @keyframes spin {
@@ -548,25 +505,49 @@ const LocationMapSelector = ({ isOpen, onClose, onLocationSelect, initialLocatio
           100% { transform: rotate(360deg); }
         }
 
+        /* Mobile Responsive */
         @media (max-width: 768px) {
           .location-modal-overlay {
             padding: 10px;
           }
-          
-          .location-controls {
+
+          .location-modal {
+            max-width: 100%;
+            max-height: 90vh;
+          }
+
+          .bottom-buttons {
             flex-direction: column;
             gap: 12px;
-            align-items: stretch;
           }
-          
-          .controls-left {
-            justify-content: center;
-            flex-wrap: wrap;
+
+          .map-container {
+            min-height: 300px;
           }
-          
-          .location-info {
-            justify-content: center;
-            text-align: center;
+
+          .map {
+            min-height: 300px;
+          }
+        }
+
+        /* Small Mobile */
+        @media (max-width: 480px) {
+          .location-header {
+            padding: 16px;
+          }
+
+          .location-header h3 {
+            font-size: 16px;
+          }
+
+          .bottom-buttons {
+            padding: 16px;
+          }
+
+          .cancel-button,
+          .location-button {
+            padding: 12px 16px;
+            font-size: 13px;
           }
         }
       `}</style>
