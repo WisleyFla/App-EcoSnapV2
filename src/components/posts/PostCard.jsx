@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, Repeat2, Heart, Share2, Trash2, MoreHorizontal } from 'lucide-react';
 import CommentSection from '../comments/CommentSection';
+import { useTheme } from '../../context/ThemeContext';
 import './PostCard.css';
 
 const PostCard = ({ 
@@ -12,6 +13,7 @@ const PostCard = ({
   onToggleComments, 
   showComments = false 
 }) => {
+  const { isDarkMode } = useTheme();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,6 +71,7 @@ const PostCard = ({
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Erro ao deletar:', error);
+      alert(`Erro ao deletar: ${error.message}`);
     } finally {
       setIsDeleting(false);
     }
@@ -151,7 +154,7 @@ const PostCard = ({
 
   return (
     <>
-      <article className="post-card">
+      <article className="post-card" data-theme={isDarkMode ? 'dark' : 'light'}>
         {/* Header do Post */}
         <header className="post-header">
           <div className="post-avatar">
@@ -179,16 +182,26 @@ const PostCard = ({
               <div className="post-menu">
                 <button 
                   className="menu-trigger"
-                  onClick={() => setShowMenu(!showMenu)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(!showMenu);
+                  }}
                   aria-label="Opções do post"
                 >
                   <MoreHorizontal size={18} />
                 </button>
                 
                 {showMenu && (
-                  <div className="menu-dropdown">
+                  <div 
+                    className="menu-dropdown"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button 
-                      onClick={handleDeleteClick}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDeleteConfirm(true);
+                        setShowMenu(false);
+                      }}
                       className="menu-item delete-item"
                     >
                       <Trash2 size={16} />
@@ -301,13 +314,13 @@ const PostCard = ({
         </div>
       )}
 
-      {/* Overlay para fechar menu */}
-      {showMenu && (
+      {/* Overlay para fechar menu - REMOVIDO TEMPORARIAMENTE PARA DEBUG */}
+      {/* {showMenu && (
         <div 
           className="menu-overlay" 
           onClick={() => setShowMenu(false)}
         />
-      )}
+      )} */}
     </>
   );
 };

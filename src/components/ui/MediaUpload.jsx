@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image, Video, Camera, Film } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { telegramStorage } from '../../services/telegramStorage';
 
 const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
   const [uploadedMedia, setUploadedMedia] = useState([]);
@@ -10,14 +11,21 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
 
   // Tipos aceitos
   const acceptedTypes = {
-    image: ['image/jpeg', 'image/png', 'image/webp'],
-    video: ['video/mp4', 'video/mov', 'video/avi']
+    image: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
+    video: ['video/mp4', 'video/mov', 'video/avi', 'video/webm']
   };
 
   const maxSizes = {
     image: 10 * 1024 * 1024, // 10MB
     video: 50 * 1024 * 1024  // 50MB
   };
+
+  // Verificar se Telegram está configurado
+  React.useEffect(() => {
+    if (!telegramStorage.isConfigured()) {
+      console.warn('⚠️ Telegram Storage não configurado - usando modo local');
+    }
+  }, []);
 
   // Validar arquivo
   const validateFile = (file) => {
@@ -55,27 +63,57 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
     });
   };
 
-  // Upload para Telegram
-  const uploadToTelegram = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
+  // Upload para Telegram ou fallback local
+  const uploadToStorage = async (file, mediaItem) => {
+    const toastId = `upload-${mediaItem.id}`;
+    
     try {
-      // Aqui você usaria seu serviço do Telegram
-      // Por enquanto vou simular
-      const response = await fetch('/api/telegram/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) throw new Error('Erro no upload');
-      
-      const data = await response.json();
-      return data.url; // URL pública do Telegram
+      if (telegramStorage.isConfigured()) {
+        // Upload real para Telegram
+        toast.loading(`Enviando ${file.name} para Telegram...`, { id: toastId });
+        
+        const result = mediaItem.type === 'image' 
+          ? await telegramStorage.uploadImage(file, `EcoSnap - ${file.name}`)
+          : await telegramStorage.uploadFile(file, `EcoSnap - ${file.name}`);
+        
+        if (result.success) {
+          toast.success(`${file.name} enviado com sucesso!`, { id: toastId });
+          return {
+            url: result.download_url,
+            file_id: result.file_id,
+            message_id: result.message_id
+          };
+        } else {
+          throw new Error(result.error || 'Erro no upload para Telegram');
+        }
+      } else {
+        // Fallback: usar URL local
+        toast.loading(`Processando ${file.name}...`, { id: toastId });
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay
+        
+        const objectUrl = URL.createObjectURL(file);
+        toast.success(`${file.name} processado localmente`, { id: toastId });
+        
+        return {
+          url: objectUrl,
+          file_id: null,
+          message_id: null,
+          isLocal: true
+        };
+      }
     } catch (error) {
-      console.error('Erro no upload:', error);
-      // Fallback: usar preview local por enquanto
-      return URL.createObjectURL(file);
+      console.error(`Erro no upload de ${file.name}:`, error);
+      toast.error(`Erro: ${error.message}`, { id: toastId });
+      
+      // Fallback em caso de erro: usar URL local
+      const objectUrl = URL.createObjectURL(file);
+      return {
+        url: objectUrl,
+        file_id: null,
+        message_id: null,
+        isLocal: true,
+        hasError: true
+      };
     }
   };
 
@@ -97,27 +135,29 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
         // Criar preview
         const mediaItem = await createPreview(file, type);
         
-        // Upload para Telegram (com progresso)
-        toast.loading(`Enviando ${file.name}...`, { 
-          id: `upload-${mediaItem.id}` 
-        });
+        // Upload
+        const uploadResult = await uploadToStorage(file, mediaItem);
         
-        const publicUrl = await uploadToTelegram(file);
-        mediaItem.url = publicUrl;
-        
-        toast.success(`${file.name} enviado!`, { 
-          id: `upload-${mediaItem.id}` 
-        });
+        // Adicionar dados do upload ao item
+        mediaItem.url = uploadResult.url;
+        mediaItem.file_id = uploadResult.file_id;
+        mediaItem.message_id = uploadResult.message_id;
+        mediaItem.isLocal = uploadResult.isLocal;
+        mediaItem.hasError = uploadResult.hasError;
         
         newMedia.push(mediaItem);
       }
 
       const allMedia = [...uploadedMedia, ...newMedia];
       setUploadedMedia(allMedia);
-      onMediaUpdate(allMedia);
+      
+      // Enviar URLs para o componente pai
+      const mediaUrls = allMedia.map(item => item.url);
+      onMediaUpdate(mediaUrls);
 
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao processar arquivo');
+      console.error('Erro no processamento:', error);
     } finally {
       setUploading(false);
     }
@@ -150,17 +190,51 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
     if (files.length > 0) {
       processFiles(files);
     }
+    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
   };
 
-  const removeMedia = (id) => {
+  const removeMedia = async (id) => {
+    const itemToRemove = uploadedMedia.find(item => item.id === id);
+    
+    if (itemToRemove) {
+      // Se tem message_id, tentar deletar do Telegram
+      if (itemToRemove.message_id && telegramStorage.isConfigured()) {
+        try {
+          await telegramStorage.deleteFile(itemToRemove.message_id);
+          toast.success('Arquivo removido do Telegram');
+        } catch (error) {
+          console.warn('Não foi possível deletar do Telegram:', error);
+        }
+      }
+      
+      // Se é URL local, liberar memória
+      if (itemToRemove.url && (itemToRemove.isLocal || itemToRemove.url.startsWith('blob:'))) {
+        URL.revokeObjectURL(itemToRemove.url);
+      }
+    }
+    
     const filtered = uploadedMedia.filter(item => item.id !== id);
     setUploadedMedia(filtered);
-    onMediaUpdate(filtered);
+    
+    const mediaUrls = filtered.map(item => item.url);
+    onMediaUpdate(mediaUrls);
   };
 
   const openFileDialog = () => {
     fileInputRef.current?.click();
   };
+
+  // Cleanup URLs quando componente for desmontado
+  React.useEffect(() => {
+    return () => {
+      uploadedMedia.forEach(item => {
+        if (item.url && (item.isLocal || item.url.startsWith('blob:'))) {
+          URL.revokeObjectURL(item.url);
+        }
+      });
+    };
+  }, []);
 
   return (
     <div className="media-upload-container">
@@ -190,7 +264,7 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
             ) : (
               <>
                 <Camera size={16} />
-                Escolher Mídia
+                Mídia ({uploadedMedia.length}/{maxFiles})
               </>
             )}
           </button>
@@ -207,6 +281,18 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
                       <Video size={12} />
                     </div>
                   )}
+                  
+                  {/* Indicador de status */}
+                  {item.hasError && (
+                    <div className="status-indicator error" title="Erro no upload">⚠️</div>
+                  )}
+                  {item.isLocal && !item.hasError && (
+                    <div className="status-indicator local" title="Arquivo local">📱</div>
+                  )}
+                  {!item.isLocal && !item.hasError && (
+                    <div className="status-indicator telegram" title="Enviado para Telegram">☁️</div>
+                  )}
+                  
                   <button
                     className="compact-remove-btn"
                     onClick={(e) => {
@@ -249,7 +335,7 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
               {uploading ? (
                 <div className="upload-loading">
                   <div className="spinner" />
-                  <span>Enviando...</span>
+                  <span>Enviando arquivos...</span>
                 </div>
               ) : (
                 <>
@@ -261,6 +347,18 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
                     <p className="upload-subtitle">
                       Imagens até 10MB • Vídeos até 50MB • Máximo {maxFiles} arquivos
                     </p>
+                    <p className="upload-subtitle">
+                      {uploadedMedia.length}/{maxFiles} arquivos selecionados
+                    </p>
+                    {telegramStorage.isConfigured() ? (
+                      <p className="upload-subtitle telegram-status">
+                        ☁️ Telegram Storage ativo
+                      </p>
+                    ) : (
+                      <p className="upload-subtitle local-status">
+                        📱 Modo local (Telegram não configurado)
+                      </p>
+                    )}
                   </div>
                   <div className="upload-buttons">
                     <button type="button" className="upload-btn">
@@ -291,6 +389,13 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
                   >
                     <X size={16} />
                   </button>
+                  
+                  {/* Status indicator */}
+                  <div className="media-status">
+                    {item.hasError && <span className="status-badge error">⚠️</span>}
+                    {item.isLocal && !item.hasError && <span className="status-badge local">📱</span>}
+                    {!item.isLocal && !item.hasError && <span className="status-badge telegram">☁️</span>}
+                  </div>
                   
                   {item.type === 'image' ? (
                     <img 
@@ -510,6 +615,7 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
           display: flex;
           align-items: center;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .compact-upload-btn {
@@ -549,6 +655,7 @@ const MediaUpload = ({ onMediaUpdate, maxFiles = 4, compact = false }) => {
           display: flex;
           gap: 6px;
           align-items: center;
+          flex-wrap: wrap;
         }
 
         .compact-preview-item {
