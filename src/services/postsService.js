@@ -4,88 +4,82 @@
 import { supabase } from '../lib/supabase';
 
 export const postsService = {
-  // Buscar posts do feed principal (sem comunidade específica)
-  async getMainFeedPosts(limit = 20) {
+  // Buscar posts do feed principal (atualizado para nova estrutura)
+  async getMainFeedPosts(limit = 20, offset = 0) {
     try {
       const { data, error } = await supabase
         .from('posts')
         .select(`
           *,
-          users!posts_user_id_fkey (
+          profiles!posts_user_id_fkey (
+            id,
             username,
-            display_name,
-            avatar_url,
-            role
+            full_name,
+            avatar_url
           ),
-          reactions (
-            count
-          )
+          likes (count),
+          comments (count)
         `)
-        .is('community_id', null) // SÓ posts do feed principal
-        .eq('privacy', 'public')   // SÓ posts públicos
+        .eq('visibility', 'public')
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .range(offset, offset + limit - 1);
 
       if (error) throw error;
 
       // Processar dados para o formato esperado pelo componente
-      return data.map(post => ({
+      return data?.map(post => ({
         id: post.id,
-        username: post.users?.display_name || 'Usuário',
-        handle: `@${post.users?.username || 'usuario'}`,
+        username: post.profiles?.full_name || post.profiles?.username || 'Usuário',
+        handle: `@${post.profiles?.username || 'usuario'}`,
         time: this.formatTimeAgo(post.created_at),
         content: post.content,
         hashtags: post.tags ? post.tags.map(tag => `#${tag}`).join(' ') : '',
-        location: post.location_name || 'Localização não informada',
+        location: post.location?.address || 'Localização não informada',
         likes: post.likes_count || 0,
         comments: post.comments_count || 0,
-        reposts: post.shares_count || 0,
-        isLiked: false, // TODO: verificar se usuário atual curtiu
-        latitude: post.latitude,
-        longitude: post.longitude,
-        species: post.species_identified || [],
-        scientificNames: post.scientific_names || [],
-        weather: post.weather_condition,
-        temperature: post.temperature,
-        difficulty: post.difficulty_level,
-        isValidated: post.is_scientific_validated,
-        validatedBy: post.validated_by,
-        originalPost: post
-      }));
+        reposts: 0, // Manter compatibilidade
+        isLiked: false, // Será verificado separadamente
+        latitude: post.location?.lat,
+        longitude: post.location?.lng,
+        media_urls: post.media_urls || [],
+        tags: post.tags || [],
+        originalPost: post,
+        profiles: post.profiles
+      })) || [];
     } catch (error) {
       console.error('Erro ao buscar posts:', error);
       throw error;
     }
   },
 
-  // Criar novo post
-  async createPost(postData, userId) {
+  // Criar novo post (atualizado)
+  async createPost(postData) {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
       const { data, error } = await supabase
         .from('posts')
         .insert({
-          user_id: userId,
+          user_id: user.id,
           content: postData.content,
-          community_id: null, // Feed principal
-          privacy: 'public',
-          location_name: postData.location,
-          latitude: postData.latitude,
-          longitude: postData.longitude,
+          visibility: 'public',
+          location: postData.location ? {
+            lat: postData.latitude,
+            lng: postData.longitude,
+            address: postData.location,
+            place_name: postData.locationName
+          } : null,
           tags: postData.tags || [],
-          species_identified: postData.species || [],
-          scientific_names: postData.scientificNames || [],
-          weather_condition: postData.weather,
-          temperature: postData.temperature,
-          difficulty_level: postData.difficulty || 1,
-          category: 'community'
+          media_urls: postData.media_urls || []
         })
         .select(`
           *,
-          users!posts_user_id_fkey (
+          profiles!posts_user_id_fkey (
+            id,
             username,
-            display_name,
-            avatar_url,
-            role
+            full_name,
+            avatar_url
           )
         `)
         .single();
@@ -95,17 +89,18 @@ export const postsService = {
       // Retornar no formato esperado
       return {
         id: data.id,
-        username: data.users?.display_name || 'Usuário',
-        handle: `@${data.users?.username || 'usuario'}`,
+        username: data.profiles?.full_name || data.profiles?.username || 'Usuário',
+        handle: `@${data.profiles?.username || 'usuario'}`,
         time: 'agora',
         content: data.content,
         hashtags: data.tags ? data.tags.map(tag => `#${tag}`).join(' ') : '',
-        location: data.location_name || 'Localização não informada',
+        location: data.location?.address || 'Localização não informada',
         likes: 0,
         comments: 0,
         reposts: 0,
         isLiked: false,
-        originalPost: data
+        originalPost: data,
+        profiles: data.profiles
       };
     } catch (error) {
       console.error('Erro ao criar post:', error);
@@ -113,35 +108,39 @@ export const postsService = {
     }
   },
 
-  // Curtir/descurtir post
+  // Curtir/descurtir post (atualizado)
   async toggleLike(postId, userId) {
     try {
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+        userId = user.id;
+      }
+
       // Verificar se já curtiu
-      const { data: existingReaction } = await supabase
-        .from('reactions')
+      const { data: existingLike } = await supabase
+        .from('likes')
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', userId)
-        .eq('type', 'like')
         .single();
 
-      if (existingReaction) {
+      if (existingLike) {
         // Já curtiu, então descurtir
         const { error } = await supabase
-          .from('reactions')
+          .from('likes')
           .delete()
-          .eq('id', existingReaction.id);
+          .eq('id', existingLike.id);
 
         if (error) throw error;
         return { liked: false, action: 'unliked' };
       } else {
         // Não curtiu, então curtir
         const { error } = await supabase
-          .from('reactions')
+          .from('likes')
           .insert({
             post_id: postId,
-            user_id: userId,
-            type: 'like'
+            user_id: userId
           });
 
         if (error) throw error;
@@ -153,35 +152,232 @@ export const postsService = {
     }
   },
 
-  // Adicionar comentário
-  async addComment(postId, userId, content) {
+  // Verificar curtidas do usuário
+  async checkUserLikes(userId, postIds) {
+    try {
+      if (!userId || !postIds.length) return new Set();
+
+      const { data, error } = await supabase
+        .from('likes')
+        .select('post_id')
+        .eq('user_id', userId)
+        .in('post_id', postIds);
+
+      if (error) throw error;
+      return new Set(data?.map(like => like.post_id) || []);
+    } catch (error) {
+      console.error('Erro ao verificar curtidas:', error);
+      return new Set();
+    }
+  },
+
+  // Buscar posts do usuário para o perfil
+  async getUserPosts(userId, limit = 12, offset = 0) {
     try {
       const { data, error } = await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: userId,
-          content: content
-        })
+        .from('posts')
         .select(`
           *,
-          users!comments_user_id_fkey (
+          profiles!posts_user_id_fkey (
+            id,
             username,
-            display_name,
+            full_name,
             avatar_url
           )
         `)
-        .single();
+        .eq('user_id', userId)
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) throw error;
-      return data;
+      return data || [];
     } catch (error) {
-      console.error('Erro ao adicionar comentário:', error);
+      console.error('Erro ao buscar posts do usuário:', error);
       throw error;
     }
   },
 
-  // Utilitário: Formatar tempo relativo
+  // Buscar estatísticas do usuário
+  async getUserStats(userId) {
+    try {
+      // Posts count
+      const { count: postsCount, error: postsError } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('visibility', 'public');
+
+      if (postsError) throw postsError;
+
+      // Total likes recebidas
+      const { data: likesData, error: likesError } = await supabase
+        .from('likes')
+        .select('id')
+        .in('post_id', supabase
+          .from('posts')
+          .select('id')
+          .eq('user_id', userId)
+        );
+
+      if (likesError) throw likesError;
+
+      // Total comentários recebidos
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('comments')
+        .select('id')
+        .in('post_id', supabase
+          .from('posts')
+          .select('id')
+          .eq('user_id', userId)
+        );
+
+      if (commentsError) throw commentsError;
+
+      return {
+        posts: postsCount || 0,
+        likes: likesData?.length || 0,
+        comments: commentsData?.length || 0
+      };
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
+      return { posts: 0, likes: 0, comments: 0 };
+    }
+  },
+
+  // NOVAS FUNCIONALIDADES DE BUSCA
+
+  // Busca avançada de posts
+  async searchPosts({
+    searchTerm = '',
+    tags = [],
+    location = null,
+    radius = 10, // km
+    limit = 20,
+    offset = 0
+  }) {
+    try {
+      let query = supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_user_id_fkey (
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('visibility', 'public');
+
+      // Busca por texto (full-text search)
+      if (searchTerm.trim()) {
+        query = query.textSearch('content', searchTerm, {
+          type: 'websearch',
+          config: 'portuguese'
+        });
+      }
+
+      // Filtro por tags
+      if (tags.length > 0) {
+        query = query.overlaps('tags', tags);
+      }
+
+      // Filtro por localização
+      if (location && location.lat && location.lng) {
+        // Usar função SQL personalizada para busca geográfica
+        query = query.rpc('search_posts_by_location', {
+          search_lat: location.lat,
+          search_lng: location.lng,
+          radius_km: radius,
+          search_text: searchTerm || null,
+          filter_tags: tags.length > 0 ? tags : null
+        });
+      }
+
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro na busca de posts:', error);
+      throw error;
+    }
+  },
+
+  // Buscar posts por tags populares
+  async getPopularTags(limit = 10) {
+    try {
+      // Esta query seria otimizada em produção
+      const { data, error } = await supabase
+        .from('posts')
+        .select('tags')
+        .eq('visibility', 'public')
+        .not('tags', 'is', null);
+
+      if (error) throw error;
+
+      // Contar tags manualmente
+      const tagCounts = {};
+      data?.forEach(post => {
+        post.tags?.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+
+      // Ordenar e retornar top tags
+      return Object.entries(tagCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, limit)
+        .map(([tag, count]) => ({ tag, count }));
+    } catch (error) {
+      console.error('Erro ao buscar tags populares:', error);
+      return [];
+    }
+  },
+
+  // Buscar posts próximos
+  async getNearbyPosts(latitude, longitude, radius = 5, limit = 20) {
+    try {
+      const { data, error } = await supabase.rpc('get_nearby_posts', {
+        user_lat: latitude,
+        user_lng: longitude,
+        radius_km: radius,
+        max_results: limit
+      });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar posts próximos:', error);
+      // Fallback para busca simples
+      return this.getMainFeedPosts(limit);
+    }
+  },
+
+  // Deletar post
+  async deletePost(postId) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar post:', error);
+      throw error;
+    }
+  },
+
+  // Utilitário: Formatar tempo relativo (mantido compatível)
   formatTimeAgo(dateString) {
     const now = new Date();
     const date = new Date(dateString);
@@ -206,86 +402,51 @@ export const postsService = {
     }
   },
 
-  // Buscar posts por usuário
-  async getUserPosts(userId, limit = 10) {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          users!posts_user_id_fkey (
-            username,
-            display_name,
-            avatar_url,
-            role
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('privacy', 'public')
-        .order('created_at', { ascending: false })
-        .limit(limit);
+  // Configurar subscription para posts em tempo real
+  subscribeToFeed(callback) {
+    const channel = supabase
+      .channel('public:posts')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'posts',
+          filter: 'visibility=eq.public'
+        },
+        async (payload) => {
+          // Buscar dados completos do novo post
+          const { data, error } = await supabase
+            .from('posts')
+            .select(`
+              *,
+              profiles!posts_user_id_fkey (
+                id,
+                username,
+                full_name,
+                avatar_url
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single();
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Erro ao buscar posts do usuário:', error);
-      throw error;
-    }
+          if (!error && data) {
+            callback({
+              type: 'INSERT',
+              post: data
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return channel;
   },
 
-  // Buscar posts por localização
-  async getPostsByLocation(latitude, longitude, radius = 1000, limit = 20) {
-    try {
-      // Busca simples por agora - em produção usaria ST_DWithin do PostGIS
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          users!posts_user_id_fkey (
-            username,
-            display_name,
-            avatar_url,
-            role
-          )
-        `)
-        .not('latitude', 'is', null)
-        .not('longitude', 'is', null)
-        .eq('privacy', 'public')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Erro ao buscar posts por localização:', error);
-      throw error;
-    }
-  },
-
-  // Buscar posts por espécie
-  async getPostsBySpecies(species, limit = 20) {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          users!posts_user_id_fkey (
-            username,
-            display_name,
-            avatar_url,
-            role
-          )
-        `)
-        .contains('species_identified', [species])
-        .eq('privacy', 'public')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Erro ao buscar posts por espécie:', error);
-      throw error;
+  // Remover subscription
+  unsubscribeFromFeed(channel) {
+    if (channel) {
+      supabase.removeChannel(channel);
     }
   }
 };

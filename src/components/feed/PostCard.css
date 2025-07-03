@@ -1,0 +1,332 @@
+/* src/components/feed/PostCard.css */
+
+.post-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.post-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Header do Post */
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.post-author:hover {
+  opacity: 0.8;
+}
+
+.author-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.author-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.post-time {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.post-menu-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: background-color 0.2s ease;
+}
+
+.post-menu-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.post-menu-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Localização */
+.post-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: #f9fafb;
+  color: #6b7280;
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.location-icon {
+  width: 16px;
+  height: 16px;
+  color: #ef4444;
+}
+
+/* Conteúdo */
+.post-content {
+  padding: 16px;
+}
+
+.post-text {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+  white-space: pre-wrap;
+}
+
+.show-more-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  font-size: inherit;
+}
+
+.show-more-btn:hover {
+  text-decoration: underline;
+}
+
+/* Tags */
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.post-tag {
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Mídia */
+.post-media {
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.post-image,
+.post-video {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+.post-video {
+  background-color: #000;
+}
+
+/* Footer */
+.post-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 8px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.action-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Botão de curtir */
+.like-btn.liked {
+  color: #ef4444;
+}
+
+.like-btn.liked svg {
+  fill: #ef4444;
+  stroke: #ef4444;
+}
+
+.like-btn:hover:not(.liked) {
+  color: #ef4444;
+  background-color: #fef2f2;
+}
+
+/* Botão de comentar */
+.comment-btn:hover {
+  color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Botão de compartilhar */
+.share-btn:hover {
+  color: #10b981;
+  background-color: #f0fdf4;
+}
+
+/* Stats */
+.post-stats {
+  display: flex;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.stat-item {
+  cursor: pointer;
+}
+
+.stat-item:hover {
+  text-decoration: underline;
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+  .post-card {
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+  
+  .post-header {
+    padding: 12px;
+  }
+  
+  .post-content {
+    padding: 12px;
+  }
+  
+  .post-footer {
+    padding: 8px 12px;
+  }
+  
+  .author-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .author-name {
+    font-size: 15px;
+  }
+  
+  .post-text {
+    font-size: 15px;
+  }
+  
+  .post-actions {
+    gap: 16px;
+  }
+  
+  .action-btn {
+    padding: 6px;
+    font-size: 13px;
+  }
+  
+  .action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Dark mode (opcional) */
+@media (prefers-color-scheme: dark) {
+  .post-card {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .post-header {
+    border-bottom-color: #374151;
+  }
+  
+  .author-name {
+    color: #f9fafb;
+  }
+  
+  .post-text {
+    color: #e5e7eb;
+  }
+  
+  .post-location {
+    background-color: #374151;
+    border-bottom-color: #4b5563;
+  }
+  
+  .post-footer {
+    border-top-color: #374151;
+  }
+  
+  .post-stats {
+    border-top-color: #374151;
+  }
+  
+  .action-btn {
+    color: #9ca3af;
+  }
+  
+  .action-btn:hover {
+    background-color: #374151;
+  }
+}

@@ -1,23 +1,32 @@
+// src/components/pages/Home.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
-import { Home as HomeIcon, Users, Book, User, Sun, MessageCircle, Repeat2, Heart, Share2, Search, Plus, X, Map } from 'lucide-react';
+import { Home as HomeIcon, Users, Book, User, Sun, MessageCircle, Repeat2, Heart, Share2, Search, Plus, X, Map, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { postsService } from '../../services/postsService';
+import { useSuperSimpleFeed } from '../../hooks/useSuperSimpleFeed';
 import LocationMapSelector from '../ui/LocationMapSelector';
 import MediaUpload from '../ui/MediaUpload';
+import CommentSection from '../comments/CommentSection';
+import PostCard from '../posts/PostCard';
 
 function Home() {
   const { isDarkMode, toggleTheme } = useTheme();
   const { user } = useAuth();
 
-  // Estados para posts
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { 
+    posts, 
+    loading, 
+    error, 
+    toggleLike: handleLikeAction, 
+    createPost: handleCreatePost,
+    deletePost: handleDeletePost, 
+    refresh: refreshFeed 
+  } = useSuperSimpleFeed();
 
   // Estados para novo post
   const [isCreatingPost, setIsCreatingPost] = useState(false);
@@ -30,6 +39,9 @@ function Home() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [postMedia, setPostMedia] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
 
   const [recommendedUsers, setRecommendedUsers] = useState([
     { id: 1, name: 'Carlos', handle: '@carlos_pesq', isFollowing: false },
@@ -37,44 +49,13 @@ function Home() {
     { id: 3, name: 'Lucas', handle: '@lucas_dev', isFollowing: false },
   ]);
 
-  // Carregar posts quando componente monta
-  useEffect(() => {
-    loadPosts();
-  }, []);
-
-  // Função para carregar posts do Supabase
-  const loadPosts = async () => {
-    try {
-      setLoading(true);
-      const data = await postsService.getMainFeedPosts(20);
-      setPosts(data);
-    } catch (error) {
-      console.error('Erro ao carregar posts:', error);
-      toast.error('Erro ao carregar posts');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Função para atualizar feed
-  const refreshFeed = async () => {
-    try {
-      setRefreshing(true);
-      const data = await postsService.getMainFeedPosts(20);
-      setPosts(data);
-      toast.success('Feed atualizado!');
-    } catch (error) {
-      console.error('Erro ao atualizar feed:', error);
-      toast.error('Erro ao atualizar feed');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   // Função para lidar com upload de mídia
   const handleMediaUpdate = (mediaList) => {
-    setPostMedia(mediaList);
+    console.log('📁 Media recebida:', mediaList);
+    const cleanMediaList = Array.isArray(mediaList) ? mediaList : [];
+    setPostMedia(cleanMediaList);
   };
+
   // Função para lidar com seleção de localização do mapa
   const handleLocationSelect = (location) => {
     setCurrentLocation({
@@ -158,45 +139,52 @@ function Home() {
 
     try {
       setIsCreatingPost(true);
-
-      // Processar tags
+      
+      console.log('🚀 Iniciando criação do post...');
+      
+      // Processar tags (separar por vírgula e limpar)
       const tags = newPostData.tags
-        .split(',')
-        .map(tag => tag.trim().replace('#', ''))
-        .filter(Boolean);
+        ? newPostData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+        : [];
 
+      // Preparar dados do post
       const postData = {
-        content: newPostData.content,
-        location: currentLocation ? currentLocation.fullAddress : null,
-        coordinates: currentLocation ? currentLocation.coordinates : null,
+        content: newPostData.content.trim(),
         tags: tags,
-        media: postMedia.map(item => ({
-          url: item.url,
-          type: item.type,
-          name: item.name
-        }))
+        location: currentLocation || null,
+        media_urls: postMedia || []
       };
 
-      const newPost = await postsService.createPost(postData, user.id);
+      console.log('📝 Dados do post preparados:', postData);
+
+      // Criar o post usando o hook
+      await handleCreatePost(postData);
       
-      // Adicionar o novo post no topo da lista
-      setPosts([newPost, ...posts]);
+      console.log('✅ Post criado com sucesso!');
+      toast.success('Post criado com sucesso! 🎉');
       
       // Limpar formulário
-      setNewPostData({
-        content: '',
-        tags: ''
-      });
+      setNewPostData({ content: '', tags: '' });
       setCurrentLocation(null);
       setPostMedia([]);
-      
       setNewPostModal(false);
-      toast.success('Post criado com sucesso!');
+      
     } catch (error) {
-      console.error('Erro ao criar post:', error);
-      toast.error('Erro ao criar post. Tente novamente.');
+      console.error('❌ Erro ao criar post:', error);
+      toast.error(`Erro ao criar post: ${error.message}`);
     } finally {
       setIsCreatingPost(false);
+    }
+  };
+
+  // Função para deletar post usando o componente
+  const handleDelete = async (postId) => {
+    try {
+      await handleDeletePost(postId);
+      toast.success('Post deletado com sucesso! 🗑️');
+    } catch (error) {
+      console.error('❌ Erro ao deletar post:', error);
+      toast.error(`Erro ao deletar post: ${error.message}`);
     }
   };
 
@@ -214,36 +202,30 @@ function Home() {
     }
 
     try {
-      const result = await postsService.toggleLike(postId, user.id);
-      
-      // Atualizar estado local
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post.id === postId
-            ? { 
-                ...post, 
-                isLiked: result.liked,
-                likes: result.liked ? post.likes + 1 : post.likes - 1
-              }
-            : post
-        )
-      );
-
-      toast.success(result.liked ? 'Post curtido!' : 'Curtida removida!');
+      await handleLikeAction(postId);
     } catch (error) {
       console.error('Erro ao curtir post:', error);
       toast.error('Erro ao curtir post');
     }
   };
 
-  const handleFollow = (userId) => {
-    setRecommendedUsers(prevUsers =>
-      prevUsers.map(user =>
-        user.id === userId
-          ? { ...user, isFollowing: !user.isFollowing }
-          : user
-      )
-    );
+  // Função para atualizar feed
+  const handleRefreshFeed = async () => {
+    try {
+      setRefreshing(true);
+      await refreshFeed();
+      toast.success('Feed atualizado!');
+    } catch (error) {
+      console.error('Erro ao atualizar feed:', error);
+      toast.error('Erro ao atualizar feed');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Função para ABRIR/FECHAR comentários
+  const handleToggleComments = (postId) => {
+    setOpenCommentsPostId(prevId => (prevId === postId ? null : postId));
   };
 
   const handleNewPost = async () => {
@@ -275,6 +257,32 @@ function Home() {
         </div>
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--secondary-text-color)' }}>
           Carregando posts...
+        </div>
+      </main>
+    );
+  }
+
+  // Mostrar erro se houver
+  if (error) {
+    return (
+      <main className="main-content">
+        <div className="search-bar">
+          <Search className="search-icon-bar" />
+          <input type="text" className="search-input" placeholder="Buscar no EcoSnap..." />
+        </div>
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--secondary-text-color)' }}>
+          <h3>❌ Erro ao carregar posts</h3>
+          <p>{error}</p>
+          <button onClick={handleRefreshFeed} style={{ 
+            background: '#10b981', 
+            color: 'white', 
+            border: 'none', 
+            padding: '8px 16px', 
+            borderRadius: '6px', 
+            cursor: 'pointer' 
+          }}>
+            Tentar Novamente
+          </button>
         </div>
       </main>
     );
@@ -323,7 +331,7 @@ function Home() {
           <input type="text" className="search-input" placeholder="Buscar no EcoSnap..." />
           <button 
             className="refresh-btn" 
-            onClick={refreshFeed}
+            onClick={handleRefreshFeed}
             disabled={refreshing}
             title="Atualizar feed"
             style={{ 
@@ -353,118 +361,17 @@ function Home() {
             </p>
           </div>
         ) : (
-          /* Lista de posts reais */
-          posts.map(post => (
-            <div className="post" key={post.id}>
-              <div className="post-header">
-                <div className="avatar">
-                  {post.username ? post.username.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="post-info">
-                  <div className="username">{post.username}</div>
-                  <div className="handle">{post.handle}</div>
-                </div>
-                <div className="post-time">{post.time}</div>
-              </div>
-              
-              <div className="post-content">{post.content}</div>
-              
-              {post.hashtags && (
-                <div className="hashtags">{post.hashtags}</div>
-              )}
-
-              {/* Exibir mídia do post */}
-              {post.media && post.media.length > 0 && (
-                <div className="post-media">
-                  {post.media.length === 1 ? (
-                    <div className="single-media">
-                      {post.media[0].type === 'image' ? (
-                        <img 
-                          src={post.media[0].url} 
-                          alt="Post media"
-                          className="post-image-single"
-                        />
-                      ) : (
-                        <video 
-                          src={post.media[0].url} 
-                          controls
-                          className="post-video-single"
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className={`media-grid grid-${Math.min(post.media.length, 4)}`}>
-                      {post.media.slice(0, 4).map((item, index) => (
-                        <div key={index} className="media-item">
-                          {item.type === 'image' ? (
-                            <img 
-                              src={item.url} 
-                              alt={`Post media ${index + 1}`}
-                              className="post-image-grid"
-                            />
-                          ) : (
-                            <video 
-                              src={item.url} 
-                              muted
-                              className="post-video-grid"
-                            />
-                          )}
-                          {index === 3 && post.media.length > 4 && (
-                            <div className="more-media-overlay">
-                              +{post.media.length - 4}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {post.species && post.species.length > 0 && (
-                <div className="species-tags">
-                  <strong>Espécies identificadas:</strong> {post.species.join(', ')}
-                </div>
-              )}
-              
-              <div className="location">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="location-icon">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
-                </svg>
-                {post.location}
-              </div>
-
-              <div className="post-actions">
-                <button 
-                  className="action-btn" 
-                  onClick={() => toast.info('Comentários em breve!')}
-                >
-                  <MessageCircle size={16} />
-                  {post.comments}
-                </button>
-                <button 
-                  className="action-btn" 
-                  onClick={() => toast.info('Compartilhamentos em breve!')}
-                >
-                  <Repeat2 size={16} />
-                  {post.reposts}
-                </button>
-                <button 
-                  className={`action-btn ${post.isLiked ? 'liked' : ''}`} 
-                  onClick={() => handleLike(post.id)}
-                >
-                  <Heart size={16} fill={post.isLiked ? 'currentColor' : 'none'} />
-                  {post.likes}
-                </button>
-                <button 
-                  className="action-btn" 
-                  onClick={() => toast.info('Compartilhar em breve!')}
-                >
-                  <Share2 size={16} />
-                </button>
-              </div>
-            </div>
+          /* Lista de posts usando PostCard */
+          posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUser={user}
+              onLike={handleLike}
+              onDelete={handleDelete}
+              onToggleComments={handleToggleComments}
+              showComments={openCommentsPostId === post.id}
+            />
           ))
         )}
       </main>
@@ -529,7 +436,7 @@ function Home() {
                     }}>
                       <span style={{ color: '#90EE90' }}>📍</span>
                       <span style={{ color: '#FFFFFF', fontSize: '14px' }}>
-                        {currentLocation.name}
+                        {typeof currentLocation.name === 'string' ? currentLocation.name : 'Localização selecionada'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -556,7 +463,6 @@ function Home() {
                       <button
                         type="button"
                         onClick={getQuickLocation}
-                        disabled={locationLoading}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -573,11 +479,7 @@ function Home() {
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        {locationLoading ? (
-                          <>🔄 Obtendo...</>
-                        ) : (
-                          <>📍 GPS Atual</>
-                        )}
+                        {locationLoading ? '🔄 Obtendo...' : '📍 GPS Atual'}
                       </button>
                     </div>
                   </div>
@@ -635,11 +537,7 @@ function Home() {
                         minWidth: '100px'
                       }}
                     >
-                      {locationLoading ? (
-                        <>🔄 Obtendo...</>
-                      ) : (
-                        <>📍 GPS Atual</>
-                      )}
+                      {locationLoading ? '🔄 Obtendo...' : '📍 GPS Atual'}
                     </button>
                   </div>
                 )}
@@ -679,7 +577,7 @@ function Home() {
               </button>
               <button 
                 onClick={createPost} 
-                disabled={isCreatingPost || !newPostData.content.trim() || !currentLocation}
+                disabled={isCreatingPost || !newPostData.content.trim()}
                 className="publish-btn"
               >
                 {isCreatingPost ? 'Publicando...' : 'Publicar'}
@@ -705,7 +603,7 @@ function Home() {
         </button>
       </div>
 
-      {/* CSS adicional para o modal */}
+      {/* CSS simplificado - só modal de criação */}
       <style jsx>{`
         .modal-overlay {
           position: fixed;
@@ -721,7 +619,7 @@ function Home() {
         }
 
         .modal-content {
-          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};;
+          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};
           border-radius: 30px;
           padding: 0;
           width: 90%;
@@ -817,7 +715,7 @@ function Home() {
         .publish-btn {
           background: #275736;
           color: white;
-          border:  #90EE90 2px solid;
+          border: #90EE90 2px solid;
           padding: 12px 24px;
           border-radius: 8px;
           cursor: pointer;
@@ -837,12 +735,6 @@ function Home() {
         .publish-btn:disabled {
           background: #cccccc;
           cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-
-        .publish-btn:disabled:hover {
-          background: #cccccc;
           transform: none;
           box-shadow: none;
         }
@@ -877,74 +769,6 @@ function Home() {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-
-        .post-media {
-          margin: 12px 0;
-        }
-
-        .single-media {
-          border-radius: 12px;
-          overflow: hidden;
-        }
-
-        .post-image-single, .post-video-single {
-          width: 100%;
-          max-height: 400px;
-          object-fit: cover;
-          display: block;
-        }
-
-        .media-grid {
-          display: grid;
-          gap: 4px;
-          border-radius: 12px;
-          overflow: hidden;
-        }
-
-        .grid-2 {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        .grid-3 {
-          grid-template-columns: 2fr 1fr;
-          grid-template-rows: 1fr 1fr;
-        }
-
-        .grid-3 .media-item:first-child {
-          grid-row: 1 / 3;
-        }
-
-        .grid-4 {
-          grid-template-columns: 1fr 1fr;
-          grid-template-rows: 1fr 1fr;
-        }
-
-        .media-item {
-          position: relative;
-          aspect-ratio: 1;
-          overflow: hidden;
-        }
-
-        .post-image-grid, .post-video-grid {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .more-media-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 24px;
-          font-weight: bold;
         }
       `}</style>
     </>
