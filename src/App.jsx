@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 
-import Home from './components/pages/Home';
+import Home from './components/pages/part_Home/Home';
 import Profile from './components/pages/Profile';
 
 import Loading from './components/ui/Loading';

@@ -15,7 +15,7 @@ import {
   checkUsernameAvailability
 } from '../../services/profileService';
 
-import './Profile.css';
+import '../../styles/pages/Profile.css';
 
 function Profile() {
   const [activeTab, setActiveTab] = useState('activity');
