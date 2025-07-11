@@ -17,8 +17,21 @@ const PostCard = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Estado local para a contagem de comentários, inicializado com o valor do post
+  const [commentsCount, setCommentsCount] = useState(Number(post.comments_count) || 0);
 
   const isOwner = currentUser && post.user_id === currentUser.id;
+
+  // Função para incrementar a contagem de comentários
+  const handleCommentAdded = () => {
+    setCommentsCount(prevCount => prevCount + 1);
+  };
+
+  // Função para decrementar a contagem de comentários
+  const handleCommentRemoved = () => {
+    setCommentsCount(prevCount => Math.max(0, prevCount - 1));
+  };
 
   // Formatação de tempo relativo
   const formatTimeAgo = (dateString) => {
@@ -249,7 +262,8 @@ const PostCard = ({
             aria-label="Comentários"
           >
             <MessageCircle size={18} />
-            <span>{Number(post.comments_count) || 0}</span>
+            {/* Usando o estado local para exibir a contagem atualizada */}
+            <span>{commentsCount}</span>
           </button>
           
           <button 
@@ -272,7 +286,12 @@ const PostCard = ({
         {/* Seção de Comentários */}
         {showComments && (
           <div className="post-comments">
-            <CommentSection postId={post.id} />
+            {/* Passando as funções de callback para o CommentSection */}
+            <CommentSection 
+              postId={post.id}
+              onCommentAdded={handleCommentAdded}
+              onCommentRemoved={handleCommentRemoved}
+            />
           </div>
         )}
       </article>
@@ -314,13 +333,13 @@ const PostCard = ({
         </div>
       )}
 
-      {/* Overlay para fechar menu - REMOVIDO TEMPORARIAMENTE PARA DEBUG */}
-      {/* {showMenu && (
+      {/* Overlay para fechar menu */}
+      {showMenu && (
         <div 
           className="menu-overlay" 
           onClick={() => setShowMenu(false)}
         />
-      )} */}
+      )}
     </>
   );
 };

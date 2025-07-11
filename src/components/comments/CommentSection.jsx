@@ -5,7 +5,7 @@ import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
 import './CommentSection.css';
 
-const CommentSection = ({ postId }) => {
+const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,8 +25,6 @@ const CommentSection = ({ postId }) => {
   useEffect(() => {
     if (postId) {
       loadComments();
-      // Real-time desabilitado temporariamente devido a problemas de conexão
-      // setupRealTimeSubscription();
     }
 
     return () => {
@@ -37,7 +35,6 @@ const CommentSection = ({ postId }) => {
   }, [postId]);
 
   const loadComments = async () => {
-    // Removido setLoading(true) - não mostra loading inicial
     setError('');
     
     try {
@@ -77,88 +74,23 @@ const CommentSection = ({ postId }) => {
       setError('Erro ao carregar comentários');
       console.error('Erro ao carregar comentários:', err);
     }
-    // Removido setLoading(false)
   };
 
-  const setupRealTimeSubscription = () => {
-    if (subscription) {
-      supabase.removeChannel(subscription);
-    }
-
-    try {
-      const channel = supabase
-        .channel(`comments:${postId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'comments',
-            filter: `post_id=eq.${postId}`
-          },
-          async (payload) => {
-            try {
-              // Buscar perfil do novo comentário
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('id, username, full_name, avatar_url')
-                .eq('id', payload.new.user_id)
-                .single();
-
-              const newComment = {
-                ...payload.new,
-                profiles: profile || {
-                  id: payload.new.user_id,
-                  username: 'usuario',
-                  full_name: 'Usuário',
-                  avatar_url: null
-                }
-              };
-
-              if (!newComment.parent_id) {
-                setComments(prev => [...prev, newComment]);
-              }
-            } catch (error) {
-              console.error('Erro ao processar novo comentário real-time:', error);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'comments',
-          },
-          (payload) => {
-            setComments(prev => prev.filter(c => c.id !== payload.old.id));
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Real-time conectado para comentários');
-          } else if (status === 'CHANNEL_ERROR') {
-            console.warn('⚠️ Erro na conexão real-time, funcionando sem updates automáticos');
-          }
-        });
-
-      setSubscription(channel);
-    } catch (error) {
-      console.warn('⚠️ Real-time não disponível, funcionando sem updates automáticos:', error);
-    }
-  };
-
+  // Função para lidar com um novo comentário, agora notificando o componente pai.
   const handleNewComment = (newComment) => {
-    // Adicionar visualmente sem esperar o real-time
     if (!comments.some(c => c.id === newComment.id)) {
       setComments(prev => [...prev, newComment]);
+      onCommentAdded?.(); // Notifica o PostCard que um comentário foi adicionado
     }
   };
 
+  // Função para lidar com a exclusão de um comentário, notificando o pai.
   const handleCommentDelete = (commentId) => {
     setComments(prev => prev.filter(comment => comment.id !== commentId));
+    onCommentRemoved?.(); // Notifica o PostCard que um comentário foi removido
   };
 
+  // Função para lidar com a edição de um comentário.
   const handleCommentEdit = (commentId, updatedComment) => {
     setComments(prev => 
       prev.map(comment => 
@@ -169,8 +101,10 @@ const CommentSection = ({ postId }) => {
     );
   };
 
+  // Função para lidar com uma nova resposta, notificando o pai.
   const handleReply = (parentId, newReply) => {
     console.log('Nova resposta no post:', newReply);
+    onCommentAdded?.(); // Notifica o PostCard, pois uma resposta também aumenta a contagem total.
   };
 
   return (
@@ -217,6 +151,8 @@ const CommentSection = ({ postId }) => {
               onDelete={handleCommentDelete}
               onEdit={handleCommentEdit}
               currentUserId={currentUser?.id}
+              // Passando a prop para notificar sobre a exclusão de respostas aninhadas
+              onCommentRemoved={onCommentRemoved}
             />
           </div>
         ))}
