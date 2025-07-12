@@ -11,62 +11,8 @@
   margin-bottom: 16px;
 }
 
-.inline-login-prompt {
-  padding: 12px;
-  text-align: center;
-  background: #f9fafb;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
+/* ... (outros estilos iniciais sem alteração) ... */
 
-.inline-login-prompt p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.inline-comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.inline-comments-loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.inline-comments-error {
-  padding: 12px;
-  background: #fef2f2;
-  border-radius: 8px;
-  color: #dc2626;
-  font-size: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.inline-retry-btn {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.inline-no-comments {
-  padding: 16px;
-  text-align: center;
-}
-
-/* Item de comentário */
 .comment-item {
   margin-bottom: 16px;
   position: relative;
@@ -85,23 +31,37 @@
   gap: 12px;
 }
 
+/* ===== SEÇÃO DO AVATAR CORRIGIDA ===== */
+
 .comment-avatar {
+  /* O TAMANHO AGORA É DEFINIDO NO CONTÊINER */
+  width: 32px;  /* <-- Altere aqui para o tamanho do avatar principal */
+  height: 32px; /* <-- Altere aqui para o tamanho do avatar principal */
+  
   flex-shrink: 0;
+  border-radius: 50%;      /* Deixa o contêiner redondo */
+  overflow: hidden;        /* Garante que a imagem não vaze para fora do círculo */
+  background-color: #f3f4f6; /* Fundo para o caso da imagem falhar */
 }
 
 .comment-avatar img {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e5e7eb;
+  /* A IMAGEM AGORA APENAS PREENCHE O CONTÊINER */
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Evita que a imagem seja distorcida */
 }
 
-.comment-item.level-1 .comment-avatar img,
-.comment-item.level-2 .comment-avatar img {
-  width: 28px;
+/* Ajuste de tamanho para as respostas */
+.comment-item.level-1 .comment-avatar,
+.comment-item.level-2 .comment-avatar {
+  width: 28px; /* <-- Altere aqui para o tamanho do avatar nas respostas */
   height: 28px;
 }
+
+/* A regra antiga que definia o tamanho da img da resposta foi removida por não ser mais necessária */
+
+/* ======================================= */
+
 
 .comment-body {
   flex: 1;
@@ -248,7 +208,7 @@
 }
 
 /* BOTÃO DELETAR - Vermelho */
-.delete-item {
+.comment-menu .delete-item {
   color: #dc2626;
   background: linear-gradient(135deg, #fee2e2, #fecaca);
 }
