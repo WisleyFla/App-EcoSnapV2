@@ -133,7 +133,7 @@ function Home() {
       <NewPostModal
         isOpen={newPostModal}
         onClose={() => setNewPostModal(false)}
-        onCreatePost={handleCreatePost}
+        onCreatePost={refreshFeed}
         isDarkMode={isDarkMode}
         initialLocation={currentLocation}
         onLocationSelect={setCurrentLocation}

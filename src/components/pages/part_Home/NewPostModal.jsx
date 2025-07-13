@@ -1,79 +1,123 @@
-// src/components/posts/NewPostModal.jsx
-
-import { useState, useEffect } from 'react'; // 1. Garanta que useEffect está importado
+// src/components/pages/part_Home/NewPostModal.jsx
+import React, { useState, useEffect } from 'react'; // Garanta que useEffect está importado
 import toast from 'react-hot-toast';
-import { Map, X, Plus } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { telegramService } from '../../../services/telegramService';
+import { X, Edit3, MapPin } from 'lucide-react';
 import MediaUpload from '../../ui/MediaUpload';
 import LocationMapSelector from '../../ui/LocationMapSelector';
+import './NewPostModal.css';
 
 export function NewPostModal({
   isOpen,
   onClose,
   onCreatePost,
-  isDarkMode,
-  initialLocation,
-  onLocationSelect,
+  initialLocation, // A prop que vem da Home
   onGetQuickLocation,
   locationLoading
 }) {
-  const [newPostData, setNewPostData] = useState({ content: '', tags: '' });
-  const [currentLocation, setCurrentLocation] = useState(initialLocation);
-  const [postMedia, setPostMedia] = useState([]);
-  const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [content, setContent] = useState('');
+  const [tags, setTags] = useState('');
+  const [filesToUpload, setFilesToUpload] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(initialLocation); // Estado interno
   const [showMapSelector, setShowMapSelector] = useState(false);
 
-  // 2. ADICIONE ESTE BLOCO useEffect
-  // Este hook sincroniza o estado interno do modal com a prop que vem do componente pai (Home.jsx)
+  // ===================================================================
+  // ESTE É O BLOCO DE CÓDIGO QUE FALTAVA E QUE RESOLVE O PROBLEMA
+  // ===================================================================
   useEffect(() => {
+    // Este código sincroniza o estado interno do modal com a prop que vem da Home.
+    // Sempre que a localização na Home mudar, o modal será atualizado.
     setCurrentLocation(initialLocation);
-  }, [initialLocation]); // Ele será executado sempre que a 'initialLocation' mudar
+  }, [initialLocation]);
+  // ===================================================================
 
-  const handleMediaUpdate = (mediaList) => {
-    setPostMedia(Array.isArray(mediaList) ? mediaList : []);
-  };
-
-  const handleOpenMapSelector = () => {
-    setShowMapSelector(true);
-  };
-
-  const handleLocationSelect = (location) => {
-    // Para garantir que a Home também seja atualizada, chamamos a função do pai
-    onLocationSelect({
-      name: location.name,
-      fullAddress: `${location.name} (${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)})`,
-      coordinates: {
-        latitude: location.latitude,
-        longitude: location.longitude
-      },
-      source: 'Mapa'
-    });
-    toast.success(`Local selecionado: ${location.name}`);
-    setShowMapSelector(false);
-  };
-
+  useEffect(() => {
+    if (!isOpen) {
+      setContent('');
+      setTags('');
+      setFilesToUpload([]);
+      setCurrentLocation(null);
+    }
+  }, [isOpen]);
+  
+  // (O resto do seu código, como a função handleSubmit, permanece igual)
   const handleSubmit = async () => {
-    if (!newPostData.content.trim()) {
+    if (!content.trim()) {
       toast.error('O conteúdo do post não pode estar vazio!');
       return;
     }
+    
+    setIsSubmitting(true);
+    const toastId = toast.loading('Criando post...');
+
     try {
-      setIsCreatingPost(true);
-      const tags = newPostData.tags ? newPostData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-      await onCreatePost({
-        content: newPostData.content.trim(),
-        tags,
-        location: currentLocation,
-        media_urls: postMedia
-      });
-      setNewPostData({ content: '', tags: '' });
-      onLocationSelect(null); // Limpa a localização no pai
-      setPostMedia([]);
+      const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data: newPost, error: postError } = await supabase
+        .from('posts')
+        .insert({
+          user_id: user.id,
+          content: content.trim(),
+          tags: tagsArray,
+          location: currentLocation,
+          media_urls: [],
+        })
+        .select()
+        .single();
+      
+      if (postError) throw postError;
+
+      let finalMediaUrls = [];
+      if (filesToUpload.length > 0) {
+        toast.loading('Enviando mídias...', { id: toastId });
+        
+        const uploadPromises = filesToUpload.map(file => 
+          telegramService.uploadMedia(file, newPost.id, content.trim())
+        );
+        const uploadResults = await Promise.all(uploadPromises);
+
+        const successfulUploads = uploadResults.filter(r => r.success);
+        if (successfulUploads.length < filesToUpload.length) {
+          toast.error("Algumas mídias falharam ao enviar.");
+        }
+        finalMediaUrls = successfulUploads.map(r => r.download_url);
+        
+        if (finalMediaUrls.length > 0) {
+          const { error: updateError } = await supabase
+            .from('posts')
+            .update({ media_urls: finalMediaUrls })
+            .eq('id', newPost.id);
+          if (updateError) throw updateError;
+        }
+      }
+      
+      toast.dismiss(toastId);
+      toast.success('Post criado com sucesso!');
+      onCreatePost();
       onClose();
+
     } catch (error) {
+      toast.dismiss(toastId);
       toast.error(`Erro ao criar post: ${error.message}`);
     } finally {
-      setIsCreatingPost(false);
+      setIsSubmitting(false);
     }
+  };
+
+  const handleLocationSelect = (location) => {
+    setCurrentLocation({
+      name: location.name,
+      coordinates: { latitude: location.latitude, longitude: location.longitude },
+    });
+    setShowMapSelector(false);
+  };
+
+  const handleRemoveLocation = () => {
+    setCurrentLocation(null);
+    toast('Localização removida.');
   };
 
   if (!isOpen) return null;
@@ -82,59 +126,53 @@ export function NewPostModal({
     <>
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3 className="modal-title">Nova Observação</h3>
+            <button className="close-btn" onClick={onClose} aria-label="Fechar modal"><X size={20} /></button>
+          </div>
+
           <div className="modal-body">
             <div className="form-group">
               <label htmlFor="observacao">O que você observou hoje?</label>
               <textarea
                 id="observacao"
-                value={newPostData.content}
-                onChange={(e) => setNewPostData({ ...newPostData, content: e.target.value })}
-                placeholder="Descreva sua observação..."
-                rows={3}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Compartilhe sua descoberta na natureza..."
+                rows={4}
                 autoFocus
-                style={{
-                  width: '100%', padding: '12px 16px', border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '12px', fontSize: '14px', boxSizing: 'border-box',
-                  background: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF', resize: 'none',
-                  fontFamily: 'inherit', outline: 'none'
-                }}
               />
             </div>
-
+            
             <div className="form-group">
               <label>Mídia</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <MediaUpload onMediaUpdate={handleMediaUpdate} maxFiles={4} compact={true} />
-                {postMedia.length > 0 && (<span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>{postMedia.length} arquivo{postMedia.length > 1 ? 's' : ''} selecionado{postMedia.length > 1 ? 's' : ''}</span>)}
-              </div>
+              <MediaUpload onFilesChange={setFilesToUpload} maxFiles={4} />
             </div>
 
             <div className="form-group">
               <label>Localização</label>
               {currentLocation ? (
                 <div className="location-selected">
-                  <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '12px', padding: '12px 16px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ color: '#90EE90' }}>📍</span>
-                    <span style={{ color: '#FFFFFF', fontSize: '14px' }}>
-                      {typeof currentLocation.name === 'string' ? currentLocation.name : 'Localização selecionada'}
-                    </span>
+                  <div className="location-display">
+                    <span>📍</span>
+                    <span>{currentLocation.name}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={handleOpenMapSelector} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#4CAF50', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                      🗺️ Alterar Local
+                  <div className="location-change-actions">
+                    <button type="button" onClick={() => setShowMapSelector(true)} className="location-action-btn change">
+                      <Edit3 size={14} /> Alterar
                     </button>
-                    <button type="button" onClick={onGetQuickLocation} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#2196F3', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '500', cursor: locationLoading ? 'not-allowed' : 'pointer', opacity: locationLoading ? 0.6 : 1, transition: 'all 0.2s ease' }}>
-                      {locationLoading ? '🔄 Obtendo...' : '📍 Usar GPS'}
+                    <button type="button" onClick={handleRemoveLocation} className="location-action-btn remove">
+                      <X size={14} /> Remover
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="location-buttons" style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '12px', padding: '12px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button type="button" onClick={handleOpenMapSelector} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#4CAF50', color: 'white', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s ease', flex: '1', minWidth: '140px' }}>
-                    🗺️ Selecionar no Mapa
+                <div className="location-buttons-container">
+                  <button type="button" onClick={() => setShowMapSelector(true)} className="location-btn map">
+                    <MapPin size={16} /> Selecionar no Mapa
                   </button>
-                  <button type="button" onClick={onGetQuickLocation} disabled={locationLoading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#2196F3', color: 'white', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: locationLoading ? 'not-allowed' : 'pointer', opacity: locationLoading ? 0.6 : 1, transition: 'all 0.2s ease', flex: '1', minWidth: '100px' }}>
-                    {locationLoading ? '🔄 Obtendo...' : '📍 GPS Atual'}
+                  <button type="button" onClick={onGetQuickLocation} disabled={locationLoading} className="location-btn gps">
+                    {locationLoading ? 'Buscando...' : <><MapPin size={16} /> GPS Atual</>}
                   </button>
                 </div>
               )}
@@ -142,163 +180,33 @@ export function NewPostModal({
 
             <div className="form-group">
               <label htmlFor="tags">Tags</label>
-              <input type="text" id="tags" value={newPostData.tags} onChange={(e) => setNewPostData({ ...newPostData, tags: e.target.value })} placeholder="Ex: natureza, aves, manhã, trilha" style={{ width: '100%', padding: '12px 16px', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '12px', fontSize: '14px', boxSizing: 'border-box', background: 'rgba(255, 255, 255, 0.1)', color: '#FFFFFF', fontFamily: 'inherit', outline: 'none' }} />
+              <input
+                type="text"
+                id="tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="Ex: natureza, aves, manhã, trilha"
+              />
             </div>
           </div>
 
           <div className="modal-footer">
-            <button onClick={onClose} disabled={isCreatingPost} className="cancel-btn">Cancelar</button>
-            <button onClick={handleSubmit} disabled={isCreatingPost || !newPostData.content.trim()} className="publish-btn">{isCreatingPost ? 'Publicando...' : 'Publicar'}</button>
+            <button onClick={onClose} disabled={isSubmitting} className="cancel-btn">
+              Cancelar
+            </button>
+            <button onClick={handleSubmit} disabled={isSubmitting || !content.trim()} className="publish-btn">
+              {isSubmitting ? 'Publicando...' : 'Publicar'}
+            </button>
           </div>
         </div>
       </div>
 
-      <LocationMapSelector isOpen={showMapSelector} onClose={() => setShowMapSelector(false)} onLocationSelect={handleLocationSelect} initialLocation={currentLocation?.coordinates} isDarkMode={isDarkMode} />
-
-      <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-
-        .modal-content {
-          background: ${isDarkMode ? '#1a1a1a' : '#2F4F4F'};
-          border-radius: 30px;
-          padding: 0;
-          width: 90%;
-          max-width: 400px;
-          max-height: 80vh;
-          overflow-y: auto;
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px;
-          border-bottom: 1px solid #eee;
-        }
-
-        .modal-body {
-          padding: 16px 20px;
-        }
-
-        .modal-footer {
-          display: flex;
-          justify-content: space-evenly;
-          gap: 10px;
-          padding: 20px;
-          border-top: 1px solid #eee;
-        }
-
-        .close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #666;
-          padding: 8px;
-          border-radius: 6px;
-          transition: all 0.2s ease;
-        }
-
-        .close-btn:hover {
-          background: #f5f5f5;
-          color: #333;
-        }
-
-        .form-group {
-          margin-bottom: 3px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 2px;
-          font-weight: 600;
-          color: #ffffff;
-          font-size: 16px;
-        }
-
-        .species-tags {
-          margin: 8px 0;
-          padding: 8px;
-          background: #f0f8f0;
-          border-radius: 6px;
-          font-size: 14px;
-          color: #2d5a32;
-        }
-
-        .cancel-btn {
-          background: #ffffff;
-          border: 2px solid #e0e0e0;
-          color: #666666;
-          padding: 12px 24px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s ease;
-          min-width: 100px;
-        }
-
-        .cancel-btn:hover:not(:disabled) {
-          background: #f8f9fa;
-          border-color: #d0d0d0;
-          color: #333333;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .cancel-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-
-        .publish-btn {
-          background: #275736;
-          color: white;
-          border: #90EE90 2px solid;
-          padding: 12px 24px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          transition: all 0.2s ease;
-          min-width: 120px;
-          box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
-        }
-
-        .publish-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #45a049, #3e8e41);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
-        }
-
-        .publish-btn:disabled {
-          background: #cccccc;
-          cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-          
-        .refresh-btn:hover {
-          background: rgba(74, 222, 128, 0.1) !important;
-          border-radius: 4px;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg);}
-      `}</style>
-    </> // FIX: Add closing fragment tag
+      <LocationMapSelector
+        isOpen={showMapSelector}
+        onClose={() => setShowMapSelector(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLocation={currentLocation?.coordinates}
+      />
+    </>
   );
 }
