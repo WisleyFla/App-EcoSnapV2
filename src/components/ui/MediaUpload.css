@@ -1,5 +1,11 @@
+/* src/components/ui/MediaUpload.css */
+
+/* Container principal */
 .media-upload-container {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* Botão principal de upload (quando não há arquivos) */
@@ -9,21 +15,32 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   background-color: #10b981; /* Verde */
   color: white;
 }
+
 .upload-btn.main-action:hover {
   background-color: #059669;
 }
 
-/* Grid de prévias */
+.upload-btn.main-action:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.upload-btn.main-action:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+/* Grid de prévias de mídia */
 .media-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -31,20 +48,30 @@
   margin-bottom: 12px;
 }
 
+/* Item individual de pré-visualização */
 .media-preview-item {
   position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
   overflow: hidden;
   background-color: #f3f4f6;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.media-preview-item:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Imagem de pré-visualização */
 .media-preview-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
+/* Botão para remover mídia */
 .remove-media-btn {
   position: absolute;
   top: 4px;
@@ -68,11 +95,18 @@
   background: rgba(239, 68, 68, 0.8); /* Vermelho no hover */
 }
 
+.remove-media-btn:focus {
+  outline: 2px solid white;
+}
+
+/* Container especial para pré-visualização de vídeo */
 .video-preview-container {
   position: relative;
   width: 100%;
   height: 100%;
 }
+
+/* Ícone sobreposto para vídeos */
 .video-icon-overlay {
   position: absolute;
   top: 50%;
@@ -82,10 +116,10 @@
   background: rgba(0, 0, 0, 0.5);
   padding: 8px;
   border-radius: 50%;
-  pointer-events: none; /* Não interfere no clique */
+  pointer-events: none;
 }
 
-/* Botão menor para "Adicionar mais" */
+/* Botão secundário para "Adicionar mais" */
 .upload-btn.add-more {
   border: 1px dashed #d1d5db;
   background: none;
@@ -99,9 +133,74 @@
   align-items: center;
   gap: 6px;
   transition: all 0.2s ease;
+  align-self: flex-start;
 }
+
 .upload-btn.add-more:hover {
   background: #f9fafb;
   border-color: #9ca3af;
   color: #374151;
+}
+
+.upload-btn.add-more:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.upload-btn.add-more:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Estado de loading */
+.upload-btn.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.upload-btn.loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+/* Animações */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Versão para tema escuro */
+[data-theme="dark"] .media-upload-container {
+  --preview-bg: #2d3748;
+  --preview-border: #4a5568;
+  --btn-add-more-bg: #2d3748;
+  --btn-add-more-border: #4a5568;
+  --btn-add-more-color: #cbd5e0;
+}
+
+[data-theme="dark"] .media-preview-item {
+  background-color: var(--preview-bg);
+  border: 1px solid var(--preview-border);
+}
+
+[data-theme="dark"] .upload-btn.add-more {
+  background-color: var(--btn-add-more-bg);
+  border-color: var(--btn-add-more-border);
+  color: var(--btn-add-more-color);
+}
+
+[data-theme="dark"] .upload-btn.add-more:hover {
+  background-color: #3c4b64;
+  border-color: #718096;
 }

@@ -31,7 +31,7 @@ const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
     try {
       const { data, error: commentsError } = await supabase
         .from('comments')
-        .select('*, profiles(id, username, full_name, avatar_url)')
+        .select('*')
         .eq('post_id', postId)
         .is('parent_id', null)
         .order('created_at', { ascending: true });

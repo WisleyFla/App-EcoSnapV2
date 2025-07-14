@@ -145,14 +145,24 @@ const CommentItem = ({
     setEditContent(comment.content);
   };
 
+  const getAvatarInitials = () => {
+    const name = comment.profiles?.full_name || comment.profiles?.username || 'U';
+    return name.charAt(0).toUpperCase();
+  };
+
   return (
     <div className={`comment-item level-${level}`}>
       <div className="comment-content">
         <div className="comment-avatar">
-          <img
-            src={comment.profiles?.avatar_url || '/default-avatar.png'}
-            alt={comment.profiles?.full_name || comment.profiles?.username}
-          />
+            {comment.profiles?.avatar_url ? (
+                <img 
+                  src={comment.profiles.avatar_url} 
+                  alt={`Foto de ${comment.profiles.full_name}`} 
+                  className="comment-avatar-image" 
+                />
+            ) : (
+                <div className="comment-avatar-circle">{getAvatarInitials()}</div>
+            )}
         </div>
         <div className="comment-body">
           <div className="comment-header">

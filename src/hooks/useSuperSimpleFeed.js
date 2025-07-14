@@ -87,12 +87,7 @@ export const useSuperSimpleFeed = () => {
               }
               return url;
             }).filter(url => typeof url === 'string' && url.length > 0) : [],
-            // Garantir que location seja processada corretamente
-            location: post.location && typeof post.location === 'object' ? {
-              address: String(post.location.address || post.location.place_name || 'Localização'),
-              lat: post.location.lat,
-              lng: post.location.lng
-            } : null
+          
           };
         })
       );

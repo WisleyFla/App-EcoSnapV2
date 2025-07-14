@@ -16,14 +16,15 @@ const PostCard = ({
     onToggleComments,
     showComments = false
 }) => {
+    console.log('DADOS DO POST RECEBIDO PELO CARD:', post);
+
     const { isDarkMode } = useTheme();
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [showMenu, setShowMenu] = useState(false); // Estado do menu foi adicionado de volta
+    const [showMenu, setShowMenu] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [commentsCount, setCommentsCount] = useState(Number(post.comments_count) || 0);
     const [showShareOptions, setShowShareOptions] = useState(false);
 
-    // Verificação de dono do post foi adicionada de volta
     const isOwner = currentUser && post.user_id === currentUser.id;
 
     const handleCommentAdded = () => {
@@ -47,15 +48,55 @@ const PostCard = ({
     };
 
     const renderLocation = () => {
-        if (!post.location) return 'Localização não informada';
-        if (typeof post.location === 'string') return post.location;
-        if (typeof post.location === 'object') {
-            return post.location.address || post.location.place_name || post.location.name || 'Localização não informada';
+        if (!post.location) {
+            return null;
         }
+
+        let locationData = post.location;
+
+        // Garante que o dado seja um objeto, mesmo que venha como string JSON
+        if (typeof locationData === 'string') {
+            try {
+                locationData = JSON.parse(locationData);
+            } catch (error) {
+                return locationData; // Retorna a string se não for um JSON válido
+            }
+        }
+
+        if (typeof locationData === 'object' && locationData !== null) {
+            const displayName = locationData.fullAddress || locationData.name;
+            const hasCoordinates = locationData.coordinates &&
+                                   typeof locationData.coordinates.latitude === 'number' &&
+                                   typeof locationData.coordinates.longitude === 'number';
+
+            // 1. Caso Ideal: Temos nome E coordenadas
+            if (displayName && hasCoordinates) {
+                const lat = locationData.coordinates.latitude.toFixed(4);
+                const lon = locationData.coordinates.longitude.toFixed(4);
+                return `${displayName} · Lat: ${lat}, Lon: ${lon}`;
+            }
+
+            // 2. Fallback: Temos apenas o nome
+            if (displayName) {
+                return displayName;
+            }
+
+            // 3. Fallback: Temos apenas as coordenadas
+            if (hasCoordinates) {
+                const lat = locationData.coordinates.latitude.toFixed(4);
+                const lon = locationData.coordinates.longitude.toFixed(4);
+                return `Lat: ${lat}, Lon: ${lon}`;
+            }
+        }
+        
+        // Retorna a string original se for o caso
+        if (typeof post.location === 'string') {
+            return post.location;
+        }
+
         return 'Localização não informada';
     };
     
-    // Função para abrir o modal de deleção a partir do menu
     const handleDeleteClick = () => {
         setShowDeleteConfirm(true);
         setShowMenu(false);
@@ -94,15 +135,57 @@ const PostCard = ({
             </div>
         );
     };
-
+    
+    // FUNÇÃO ATUALIZADA PARA SUPORTE A VÍDEO
     const renderMedia = () => {
-        if (!post.media_urls || !Array.isArray(post.media_urls) || post.media_urls.length === 0) return null;
-        const validUrls = post.media_urls.filter(url => url && typeof url === 'string');
-        if (validUrls.length === 0) return null;
-        if (validUrls.length === 1) {
-            return ( <div className="post-media"><div className="single-media"><img src={validUrls[0]} alt="Post media" className="media-image" onError={(e) => e.target.style.display = 'none'} /></div></div> );
+        if (!post.media_urls || !Array.isArray(post.media_urls) || post.media_urls.length === 0) {
+            return null;
         }
-        return ( <div className="post-media"><div className={`media-grid grid-${Math.min(validUrls.length, 4)}`}>{validUrls.slice(0, 4).map((url, index) => ( <div key={index} className="media-item"><img src={url} alt={`Media ${index + 1}`} className="media-image" onError={(e) => e.target.style.display = 'none'} />{index === 3 && validUrls.length > 4 && (<div className="media-overlay">+{validUrls.length - 4}</div>)}</div>))}</div></div> );
+        
+        const validUrls = post.media_urls.filter(url => typeof url === 'string' && url);
+
+        if (validUrls.length === 0) return null;
+
+        // Se houver apenas uma mídia
+        if (validUrls.length === 1) {
+            const url = validUrls[0];
+            const isVideo = url.endsWith('.mp4') || url.endsWith('.webm');
+            
+            return (
+                <div className="post-media-container">
+                    {isVideo ? (
+                        <div className="video-container">
+                            <video src={url} controls className="post-media-item" />
+                        </div>
+                    ) : (
+                        <div className="single-media">
+                            <img src={url} alt="Mídia do post" className="post-media-item" />
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Se houver múltiplas mídias (grid)
+        return (
+            <div className={`post-media-container grid-layout grid-${Math.min(validUrls.length, 4)}`}>
+                {validUrls.slice(0, 4).map((url, index) => {
+                    const isVideo = url.endsWith('.mp4') || url.endsWith('.webm');
+                    return (
+                        <div key={index} className="media-grid-item">
+                            {isVideo ? (
+                                <video src={url} className="post-media-item" />
+                            ) : (
+                                <img src={url} alt={`Mídia do post ${index + 1}`} className="post-media-item" />
+                            )}
+                            {index === 3 && validUrls.length > 4 && (
+                                <div className="media-overlay">+{validUrls.length - 4}</div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
     };
 
     const generateShareLink = (postId) => `${window.location.origin}/post/${postId}`;
@@ -112,7 +195,6 @@ const PostCard = ({
         toast.success('Link copiado!');
         setShowShareOptions(false);
     };
-
 
     const handleNativeShare = async () => {
         try {
@@ -127,13 +209,16 @@ const PostCard = ({
         }
     };
 
-
     return (
         <>
             <article className="post-card" data-theme={isDarkMode ? 'dark' : 'light'}>
                 <header className="post-header">
                     <div className="post-avatar">
-                        <div className="avatar-circle">{getAvatarInitials()}</div>
+                        {post.profiles?.avatar_url ? (
+                            <img src={post.profiles.avatar_url} alt={`Foto de ${post.profiles.full_name}`} className="avatar-image" />
+                        ) : (
+                            <div className="avatar-circle">{getAvatarInitials()}</div>
+                        )}
                     </div>
                     <div className="post-author-info">
                         <div className="author-name">{post.profiles?.full_name || post.profiles?.username || 'Usuário'}</div>
@@ -141,8 +226,6 @@ const PostCard = ({
                     </div>
                     <div className="post-metadata">
                         <time className="post-time" dateTime={post.created_at}>{formatTimeAgo(post.created_at)}</time>
-                        
-                        {/* O MENU DE OPÇÕES FOI ADICIONADO DE VOLTA AQUI */}
                         {isOwner && (
                             <div className="post-menu">
                                 <button className="menu-trigger" onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} aria-label="Opções do post">
@@ -150,13 +233,7 @@ const PostCard = ({
                                 </button>
                                 {showMenu && (
                                     <div className="menu-dropdown" onClick={(e) => e.stopPropagation()}>
-                                        <div
-                                          onClick={handleDeleteClick}
-                                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleDeleteClick(); } }}
-                                          className="menu-item delete-item"
-                                          role="button"
-                                          tabIndex="0"
-                                        >
+                                        <div onClick={handleDeleteClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleDeleteClick(); } }} className="menu-item delete-item" role="button" tabIndex="0">
                                             <span className="menu-item-content">
                                                 <Trash2 size={16} />
                                                 Apagar
@@ -188,17 +265,8 @@ const PostCard = ({
                 {showComments && ( <div className="post-comments"><CommentSection postId={post.id} onCommentAdded={handleCommentAdded} onCommentRemoved={handleCommentRemoved} /></div> )}
             </article>
 
-            <DeletePostModal
-              isOpen={showDeleteConfirm}
-              onConfirm={handleDeleteConfirm}
-              onCancel={handleDeleteCancel}
-              isDeleting={isDeleting}
-              postContent={post.content}
-            />
-
+            <DeletePostModal isOpen={showDeleteConfirm} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} isDeleting={isDeleting} postContent={post.content}/>
             {showShareOptions && ( <div className="modal-overlay" onClick={() => setShowShareOptions(false)}><div className="share-modal" onClick={(e) => e.stopPropagation()}><div className="modal-header"><h3>Compartilhar Post</h3></div><div className="modal-body"><div className="share-options"><button onClick={copyToClipboard} className="share-option"><Copy size={24} /> <span>Copiar link</span></button><a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(generateShareLink(post.id))}&text=${encodeURIComponent(post.content.substring(0, 100))}`} target="_blank" rel="noopener noreferrer" className="share-option"><Twitter size={24} /> <span>Twitter</span></a><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(generateShareLink(post.id))}`} target="_blank" rel="noopener noreferrer" className="share-option"><Facebook size={24} /> <span>Facebook</span></a><a href={`whatsapp://send?text=${encodeURIComponent(`Confira este post: ${generateShareLink(post.id)}`)}`} className="share-option"><Share2 size={24} /> <span>WhatsApp</span></a></div></div><div className="modal-footer"><button onClick={() => setShowShareOptions(false)} className="button-secondary">Fechar</button></div></div></div>)}
-            
-            {/* Overlay para fechar o menu dropdown */}
             {showMenu && <div className="menu-overlay" onClick={() => setShowMenu(false)} />}
         </>
     );

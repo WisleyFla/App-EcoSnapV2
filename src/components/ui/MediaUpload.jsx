@@ -1,23 +1,43 @@
 // src/components/ui/MediaUpload.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, X, Image, Video } from 'lucide-react';
+import { Camera, X, Image, Video, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import './MediaUpload.css'; // Importando o novo arquivo de estilo
+import './MediaUpload.css';
 
 const MediaUpload = ({ onFilesChange, maxFiles = 4, compactButton = false }) => {
   const [previews, setPreviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
+
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime'];
 
   const handleFileSelect = (selectedFiles) => {
     const filesArray = Array.from(selectedFiles);
-    const totalFiles = previews.length + filesArray.length;
+    
+    // Validação de tipo e tamanho
+    const validFiles = filesArray.filter(file => {
+      const isValidType = validTypes.some(type => file.type.startsWith(type.split('/')[0]));
+      const isValidSize = file.size <= MAX_FILE_SIZE;
+      
+      if (!isValidType) {
+        toast.error(`Tipo de arquivo não suportado: ${file.name}`);
+      }
+      if (!isValidSize) {
+        toast.error(`Arquivo muito grande: ${file.name} (máximo ${MAX_FILE_SIZE/1024/1024}MB)`);
+      }
+      
+      return isValidType && isValidSize;
+    });
+
+    const totalFiles = previews.length + validFiles.length;
 
     if (totalFiles > maxFiles) {
       toast.error(`Você pode enviar no máximo ${maxFiles} arquivos.`);
-      filesArray.splice(maxFiles - previews.length); // Limita ao máximo permitido
+      validFiles.splice(maxFiles - previews.length);
     }
 
-    const newPreviews = filesArray.map(file => ({
+    const newPreviews = validFiles.map(file => ({
       file: file,
       previewUrl: URL.createObjectURL(file),
       id: `${file.name}-${file.lastModified}-${Math.random()}`
@@ -25,16 +45,19 @@ const MediaUpload = ({ onFilesChange, maxFiles = 4, compactButton = false }) => 
 
     const updatedPreviews = [...previews, ...newPreviews];
     setPreviews(updatedPreviews);
-    
-    const allFiles = updatedPreviews.map(p => p.file);
-    onFilesChange(allFiles);
+    onFilesChange(updatedPreviews.map(p => p.file));
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     if (e.target.files) {
-      handleFileSelect(e.target.files);
+      setIsLoading(true);
+      try {
+        await handleFileSelect(e.target.files);
+      } finally {
+        setIsLoading(false);
+        e.target.value = '';
+      }
     }
-    e.target.value = '';
   };
 
   const removeFile = (idToRemove) => {
@@ -46,19 +69,17 @@ const MediaUpload = ({ onFilesChange, maxFiles = 4, compactButton = false }) => 
       URL.revokeObjectURL(itemToRemove.previewUrl);
     }
     
-    const allFiles = updatedPreviews.map(p => p.file);
-    onFilesChange(allFiles);
+    onFilesChange(updatedPreviews.map(p => p.file));
   };
 
   useEffect(() => {
     return () => {
       previews.forEach(p => URL.revokeObjectURL(p.previewUrl));
     };
-  }, []); // Limpa todos os previews ao desmontar
+  }, [previews]);
 
   return (
     <div className="media-upload-container">
-      {/* Input de arquivo, sempre escondido */}
       <input
         ref={fileInputRef}
         type="file"
@@ -66,18 +87,26 @@ const MediaUpload = ({ onFilesChange, maxFiles = 4, compactButton = false }) => 
         accept="image/*,video/*"
         onChange={handleInputChange}
         style={{ display: 'none' }}
+        disabled={isLoading}
       />
 
-      {/* Exibe o grid de prévias se houver arquivos */}
       {previews.length > 0 && (
         <div className="media-preview-grid">
           {previews.map((item) => (
             <div key={item.id} className="media-preview-item">
-              <button className="remove-media-btn" onClick={() => removeFile(item.id)}>
+              <button 
+                className="remove-media-btn" 
+                onClick={() => removeFile(item.id)}
+                aria-label={`Remover ${item.file.name}`}
+              >
                 <X size={14} />
               </button>
               {item.file.type.startsWith('image/') ? (
-                <img src={item.previewUrl} alt={item.file.name} className="media-preview-image" />
+                <img 
+                  src={item.previewUrl} 
+                  alt={`Pré-visualização de ${item.file.name}`}
+                  className="media-preview-image" 
+                />
               ) : (
                 <div className="video-preview-container">
                   <video src={item.previewUrl} className="media-preview-image" />
@@ -89,15 +118,22 @@ const MediaUpload = ({ onFilesChange, maxFiles = 4, compactButton = false }) => 
         </div>
       )}
 
-      {/* Botão de Upload: grande se não houver mídias, ou pequeno se já houver */}
       {previews.length < maxFiles && (
         <button
           type="button"
-          className={`upload-btn ${previews.length > 0 ? 'add-more' : 'main-action'}`}
+          className={`upload-btn ${previews.length > 0 ? 'add-more' : 'main-action'} ${isLoading ? 'loading' : ''}`}
           onClick={() => fileInputRef.current.click()}
+          disabled={isLoading}
+          aria-label={previews.length > 0 ? 'Adicionar mais mídias' : 'Selecionar mídias'}
         >
-          <Camera size={16} />
-          {previews.length > 0 ? 'Adicionar mais' : 'Escolher Mídia'}
+          {isLoading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <>
+              <Camera size={16} />
+              {previews.length > 0 ? 'Adicionar mais' : 'Escolher Mídia'}
+            </>
+          )}
         </button>
       )}
     </div>

@@ -102,35 +102,29 @@ function Register() {
       return;
     }
 
-    // Verificar email novamente antes de registrar
-    const emailExists = await checkEmailExists(email);
-    if (emailExists) {
-      setMessage('❌ Este email já está cadastrado. Tente fazer login ou use outro email.');
-      setMessageType('error');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       // Mapear userType para role do Supabase
       const role = userType === 'professor' ? 'professor' : 'estudante';
-      
-      await register(email, password, {
-        displayName: name,
-        username: email.split('@')[0], // Username baseado no email
-        role: role,
-        institution: '', // Será preenchido depois
-        gradeYear: '' // Será preenchido depois
-      });
-      
+
+      // ---> INÍCIO DA MUDANÇA <---
+      // Preparamos os dados com as chaves exatas que o nosso gatilho espera.
+      const profileMetaData = {
+        full_name: name, // A chave correta é 'full_name', e não 'displayName'.
+        username: email.split('@')[0] // A chave 'username' está correta.
+        // 'role', 'institution', etc., não precisam ir aqui, pois não fazem parte da tabela 'profiles'.
+      };
+
+      // Passamos os metadados para a função de registro.
+      await register(email, password, profileMetaData);
+      // ---> FIM DA MUDANÇA <---
+
       setMessage('✅ Conta criada com sucesso! Bem-vindo ao EcoSnap!');
       setMessageType('success');
       
       // Redirecionar após pequeno delay
       setTimeout(() => {
         navigate('/');
-      }, 2000);
-      
+      }, 2000);  
     } catch (error) {
       console.error("Erro ao registrar:", error);
       

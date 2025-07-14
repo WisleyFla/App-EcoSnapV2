@@ -159,7 +159,7 @@ function Home() {
       )}
 
       {/* FIX: Moved the style block inside the component's return fragment */}
-      <style jsx>{`
+      <style>{`
         .post-btn {
           background-color: #ffffff;
           color: #275736;

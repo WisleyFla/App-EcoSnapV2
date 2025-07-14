@@ -1,5 +1,5 @@
 // src/components/pages/part_Home/NewPostModal.jsx
-import React, { useState, useEffect } from 'react'; // Garanta que useEffect está importado
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 import { telegramService } from '../../../services/telegramService';
@@ -12,37 +12,37 @@ export function NewPostModal({
   isOpen,
   onClose,
   onCreatePost,
-  initialLocation, // A prop que vem da Home
+  initialLocation,
   onGetQuickLocation,
   locationLoading
 }) {
+  // Estados do Formulário
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [filesToUpload, setFilesToUpload] = useState([]);
+
+  // Estados de UI e Localização
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState(initialLocation); // Estado interno
+  const [currentLocation, setCurrentLocation] = useState(initialLocation);
   const [showMapSelector, setShowMapSelector] = useState(false);
 
-  // ===================================================================
-  // ESTE É O BLOCO DE CÓDIGO QUE FALTAVA E QUE RESOLVE O PROBLEMA
-  // ===================================================================
+  // Sincroniza o estado interno com a prop que vem do pai (Home)
   useEffect(() => {
-    // Este código sincroniza o estado interno do modal com a prop que vem da Home.
-    // Sempre que a localização na Home mudar, o modal será atualizado.
     setCurrentLocation(initialLocation);
   }, [initialLocation]);
-  // ===================================================================
 
+  // Limpa todos os estados quando o modal é fechado
   useEffect(() => {
     if (!isOpen) {
       setContent('');
       setTags('');
       setFilesToUpload([]);
       setCurrentLocation(null);
+      setIsSubmitting(false);
     }
   }, [isOpen]);
-  
-  // (O resto do seu código, como a função handleSubmit, permanece igual)
+
+  // Função principal para criar o post
   const handleSubmit = async () => {
     if (!content.trim()) {
       toast.error('O conteúdo do post não pode estar vazio!');
@@ -53,6 +53,7 @@ export function NewPostModal({
     const toastId = toast.loading('Criando post...');
 
     try {
+      // 1. Criar o post no banco apenas com texto/metadados para obter um ID
       const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -70,21 +71,31 @@ export function NewPostModal({
       
       if (postError) throw postError;
 
+      // 2. Se houver arquivos, fazer o upload deles usando o ID do post
       let finalMediaUrls = [];
       if (filesToUpload.length > 0) {
         toast.loading('Enviando mídias...', { id: toastId });
         
-        const uploadPromises = filesToUpload.map(file => 
-          telegramService.uploadMedia(file, newPost.id, content.trim())
-        );
+        const uploadPromises = filesToUpload.map(file => {
+          // Verifica se é vídeo e passa a informação para o serviço
+          const isVideo = file.type.startsWith('video/');
+          return telegramService.uploadMedia(
+            file, 
+            newPost.id, 
+            content.trim(),
+            isVideo
+          );
+        });
+        
         const uploadResults = await Promise.all(uploadPromises);
-
         const successfulUploads = uploadResults.filter(r => r.success);
+        
         if (successfulUploads.length < filesToUpload.length) {
           toast.error("Algumas mídias falharam ao enviar.");
         }
         finalMediaUrls = successfulUploads.map(r => r.download_url);
         
+        // 3. Atualiza o post no banco com as URLs das mídias
         if (finalMediaUrls.length > 0) {
           const { error: updateError } = await supabase
             .from('posts')
@@ -108,8 +119,11 @@ export function NewPostModal({
   };
 
   const handleLocationSelect = (location) => {
+    const locationName = location.name || 'Localização selecionada';
     setCurrentLocation({
-      name: location.name,
+      name: locationName,
+      fullAddress: locationName, // <-- ADICIONADO: Garante a consistência dos dados
+      source: 'MapSelector',    // <-- BÔNUS: Adiciona a origem do dado
       coordinates: { latitude: location.latitude, longitude: location.longitude },
     });
     setShowMapSelector(false);

@@ -58,7 +58,6 @@ function Profile() {
   // FUNÇÕES DAS CONFIGURAÇÕES
   // ===================================
   
-  // Função para solicitar permissão de notificações
   const requestNotificationPermission = async () => {
     try {
       if ('Notification' in window) {
@@ -66,8 +65,6 @@ function Profile() {
         
         if (permission === 'granted') {
           console.log('✅ Permissão de notificação concedida');
-          
-          // Mostrar notificação de teste
           new Notification('EcoSnap', {
             body: 'Notificações ativadas com sucesso!',
             icon: '/vite.svg'
@@ -86,12 +83,10 @@ function Profile() {
     }
   };
 
-  // Função para atualizar privacidade do perfil
   const updateProfilePrivacy = async (isPublic) => {
     try {
-      // Buscar configurações atuais primeiro
       const { data: currentUser, error: fetchError } = await supabase
-        .from('users')
+        .from('profiles') // CORRIGIDO
         .select('preferences')
         .eq('id', user.id)
         .single();
@@ -103,9 +98,8 @@ function Profile() {
 
       const currentPreferences = currentUser?.preferences || {};
       
-      // Atualizar no banco de dados
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles') // CORRIGIDO
         .update({ 
           preferences: {
             ...currentPreferences,
@@ -122,11 +116,9 @@ function Profile() {
     }
   };
 
-  // Função para ativar/desativar modo offline
   const toggleOfflineMode = (enabled) => {
     try {
       if (enabled) {
-        // Ativar service worker para cache
         if ('serviceWorker' in navigator) {
           console.log('✅ Modo offline ativado - dados serão salvos localmente');
           localStorage.setItem('ecosnap_offline_mode', 'true');
@@ -142,15 +134,11 @@ function Profile() {
     }
   };
 
-  // Função para ativar/desativar sincronização do diário
   const toggleDiarySync = (enabled) => {
     try {
       if (enabled) {
         console.log('✅ Sincronização do diário ativada');
         localStorage.setItem('ecosnap_diary_sync', 'true');
-        
-        // Implementar sincronização automática
-        // TODO: Implementar quando tivermos o sistema de diário
       } else {
         console.log('✅ Sincronização do diário desativada');
         localStorage.removeItem('ecosnap_diary_sync');
@@ -160,7 +148,6 @@ function Profile() {
     }
   };
 
-  // Carregar dados do perfil quando o componente monta
   useEffect(() => {
     if (user?.id) {
       loadProfileData();
@@ -169,7 +156,6 @@ function Profile() {
     }
   }, [user]);
 
-  // Função para carregar estatísticas
   const loadUserStats = async () => {
     try {
       const result = await getUserStats(user.id);
@@ -181,7 +167,6 @@ function Profile() {
     }
   };
 
-  // Função para carregar dados do perfil do Supabase
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
@@ -189,7 +174,7 @@ function Profile() {
       
       if (result.success && result.data) {
         const loadedData = {
-          name: result.data.display_name || user.email?.split('@')[0] || 'Usuário EcoSnap',
+          name: result.data.full_name || user.email?.split('@')[0] || 'Usuário EcoSnap', // CORRIGIDO para full_name
           handle: result.data.username ? `@${result.data.username}` : `@${user.email?.split('@')[0] || 'usuario'}`,
           bio: result.data.bio || 'Novo no EcoSnap! 🌱',
           location: result.data.institution || '',
@@ -208,14 +193,12 @@ function Profile() {
     }
   };
 
-  // Função para carregar configurações do Supabase
   const loadSettingsData = async () => {
     try {
       const result = await loadUserSettings(user.id);
       
       if (result.success && result.settings) {
         const settings = result.settings;
-        
         setPushNotifications(settings.pushNotifications ?? true);
         setPublicProfile(settings.publicProfile ?? true);
         setOfflineMode(settings.offlineMode ?? false);
@@ -243,63 +226,48 @@ function Profile() {
       case 'pushNotifications':
         newState = !pushNotifications;
         setPushNotifications(newState);
-        
-        // Implementar notificações push reais
         if (newState) {
           requestNotificationPermission();
           toast.success('Notificações Push ativadas!');
         } else {
           toast.success('Notificações Push desativadas!');
         }
-        
         console.log(`Estado Notificações Push: ${newState}`);
         break;
         
       case 'publicProfile':
         newState = !publicProfile;
         setPublicProfile(newState);
-        
-        // Atualizar privacidade do perfil (mas não durante o render)
         setTimeout(() => updateProfilePrivacy(newState), 0);
-        
         if (newState) {
           toast.success('Perfil agora é público - visível para todos!');
         } else {
           toast.success('Perfil agora é privado - apenas você pode ver!');
         }
-        
         console.log(`Estado Perfil Público: ${newState}`);
         break;
         
       case 'offlineMode':
         newState = !offlineMode;
         setOfflineMode(newState);
-        
-        // Implementar funcionalidades offline
         toggleOfflineMode(newState);
-        
         if (newState) {
           toast.success('Modo Offline ativado - dados salvos localmente!');
         } else {
           toast.success('Modo Offline desativado - usando conexão online!');
         }
-        
         console.log(`Estado Modo Offline: ${newState}`);
         break;
         
       case 'syncDiary':
         newState = !syncDiary;
         setSyncDiary(newState);
-        
-        // Implementar sincronização do diário
         toggleDiarySync(newState);
-        
         if (newState) {
           toast.success('Sincronização do Diário ativada!');
         } else {
           toast.success('Sincronização do Diário desativada!');
         }
-        
         console.log(`Estado Sincronizar Diário: ${newState}`);
         break;
         
@@ -307,7 +275,6 @@ function Profile() {
         return;
     }
 
-    // Salvar configurações no Supabase (após atualizar o estado)
     currentSettings[settingName] = newState;
     
     try {
@@ -319,7 +286,6 @@ function Profile() {
     }
   };
 
-  // Função para fazer upload de foto de perfil
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -357,7 +323,6 @@ function Profile() {
     }
   };
 
-  // Função para remover foto de perfil
   const handleRemoveImage = async () => {
     try {
       setIsUploadingImage(true);
@@ -381,7 +346,6 @@ function Profile() {
     }
   };
 
-  // Função para abrir seletor de arquivo
   const openFileSelector = () => {
     fileInputRef.current?.click();
   };
@@ -424,7 +388,6 @@ function Profile() {
     try {
       setIsSaving(true);
       
-      // Verificar se username está disponível
       const availabilityCheck = await checkUsernameAvailability(username, user.id);
       if (!availabilityCheck.success) {
         toast.error('Erro ao verificar nome de usuário');
@@ -436,9 +399,8 @@ function Profile() {
         return;
       }
       
-      // Mapear campos do Profile para campos do Supabase
       const dataToSave = {
-        display_name: editingProfile.name.trim(),
+        full_name: editingProfile.name.trim(), // CORRIGIDO para full_name
         username: username,
         bio: editingProfile.bio.trim(),
         institution: editingProfile.location.trim(),
@@ -487,7 +449,6 @@ function Profile() {
     ), { duration: 5000, position: 'top-center' });
   };
 
-  // Mostrar loading enquanto carrega os dados
   if (isLoading) {
     return (
       <main className="main-content">
@@ -511,7 +472,6 @@ function Profile() {
       />
       
       <div className="profile-header">
-        {/* Nova estrutura para avatar e botões lado a lado */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -519,7 +479,6 @@ function Profile() {
           gap: '20px',
           marginBottom: '20px'
         }}>
-          {/* Avatar */}
           <div className="profile-avatar-container" style={{
             width: '120px',
             height: '120px',
@@ -539,19 +498,16 @@ function Profile() {
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover',
-                  borderRadius: '50%',
-                  display: 'block'
+                  objectFit: 'cover'
                 }}
               />
             ) : (
               <div className="profile-avatar-placeholder">
-                <UserIcon size={20} />
+                <UserIcon size={48} />
               </div>
             )}
           </div>
           
-          {/* Botões */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -632,8 +588,8 @@ function Profile() {
         
         {profileData.website && (
           <div className="profile-website">
-            <Globe size={14} style={{ marginRight: '5px' }} />
             <a href={profileData.website} target="_blank" rel="noopener noreferrer">
+              <Globe size={14} style={{ marginRight: '5px' }} />
               {profileData.website}
             </a>
           </div>
@@ -659,7 +615,6 @@ function Profile() {
         </button>
       </div>
 
-      {/* Modal de Edição com Estilo do Modal de Post */}
       {isEditModalOpen && (
         <div className="modal-overlay" onClick={closeEditModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -945,174 +900,6 @@ function Profile() {
           </div>
         </div>
       </div>
-
-      {/* Estilos do Modal no mesmo padrão do modal de post */}
-      <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          animation: modalOverlayIn 0.3s ease-out;
-        }
-
-        @keyframes modalOverlayIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        /* Tema Claro - Azul esverdeado */
-        .modal-content {
-          background: #2F4F4F;
-          border-radius: 16px;
-          padding: 24px;
-          width: 90%;
-          max-width: 400px;
-          animation: modalSlideIn 0.3s ease-out;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-          max-height: 85vh;
-          overflow-y: auto;
-        }
-
-        /* Tema Escuro - Fundo escuro */
-        body[data-theme="dark"] .modal-content {
-          background: #1a1a1a;
-          border: 1px solid #333333;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-        }
-
-        .modal-body {
-          padding: 0;
-        }
-
-        .modal-footer {
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 0;
-          border: none;
-          margin-top: 20px;
-        }
-
-        .form-group {
-          margin-bottom: 16px;
-        }
-
-        /* Labels - Tema Claro */
-        .form-group label {
-          font-weight: 600;
-          display: block;
-          color: #FFFFFF;
-          margin-bottom: 8px;
-          font-size: 16px;
-        }
-
-        /* Labels - Tema Escuro */
-        body[data-theme="dark"] .form-group label {
-          color: #ffffff;
-        }
-
-        /* Inputs - Tema Claro */
-        .form-group input,
-        .form-group textarea {
-          border-color: rgba(255, 255, 255, 0.3) !important;
-          background: rgba(255, 255, 255, 0.1) !important;
-          color: #FFFFFF !important;
-        }
-
-        /* Inputs - Tema Escuro */
-        body[data-theme="dark"] .form-group input,
-        body[data-theme="dark"] .form-group textarea {
-          border-color: #333333 !important;
-          background: #000000 !important;
-          color: #ffffff !important;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-          border-color: #90EE90 !important;
-          box-shadow: 0 0 0 2px rgba(144, 238, 144, 0.2) !important;
-        }
-
-        /* Placeholders - Tema Claro */
-        .form-group input::placeholder,
-        .form-group textarea::placeholder {
-          color: rgba(255, 255, 255, 0.6) !important;
-        }
-
-        /* Placeholders - Tema Escuro */
-        body[data-theme="dark"] .form-group input::placeholder,
-        body[data-theme="dark"] .form-group textarea::placeholder {
-          color: #aaaaaa !important;
-        }
-
-        /* Contador de caracteres - Tema Claro */
-        .form-group div {
-          color: rgba(255, 255, 255, 0.6);
-        }
-
-        /* Contador de caracteres - Tema Escuro */
-        body[data-theme="dark"] .form-group div {
-          color: #aaaaaa;
-        }
-
-        /* Botão Cancelar - Tema Claro */
-        .modal-footer button:first-child {
-          background: rgba(255, 255, 255, 0.1) !important;
-          color: #FFFFFF !important;
-          border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        }
-
-        /* Botão Cancelar - Tema Escuro */
-        body[data-theme="dark"] .modal-footer button:first-child {
-          background: rgba(255, 255, 255, 0.1) !important;
-          color: #ffffff !important;
-          border: 1px solid #333333 !important;
-        }
-
-        /* Botão Salvar - Tema Claro */
-        .modal-footer button:last-child {
-          background: #275736 !important;
-          color: #ffffff !important;
-          border: 1px solid #90EE90 !important;
-        }
-
-        /* Botão Salvar - Tema Escuro */
-        body[data-theme="dark"] .modal-footer button:last-child {
-          background: #4CAF50 !important;
-          color: #ffffff !important;
-          border: 1px solid #4CAF50 !important;
-        }
-
-        .modal-footer button:hover:not(:disabled) {
-          opacity: 0.9;
-        }
-
-        @media (max-width: 640px) {
-          .modal-content {
-            margin: 20px;
-            width: calc(100% - 40px);
-            max-width: 400px;
-          }
-        }
-      `}</style>
     </main>
   );
 }
