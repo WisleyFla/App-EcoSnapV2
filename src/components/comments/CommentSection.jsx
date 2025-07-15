@@ -29,22 +29,24 @@ const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
     setLoading(true);
     setError('');
     try {
-      const { data, error: commentsError } = await supabase
+      const { data: comments, error } = await supabase
         .from('comments')
         .select('*')
         .eq('post_id', postId)
-        .is('parent_id', null)
-        .order('created_at', { ascending: true });
+        .is('parent_id', null);
 
-      if (commentsError) throw commentsError;
-      setComments(data || []);
-    } catch (err) {
-      setError('Erro ao carregar comentários');
-      console.error('Erro ao carregar comentários:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // 2. Buscar perfis associados
+      const userIds = [...new Set(comments.map(c => c.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+
+      // Combinar os dados
+      const commentsWithProfiles = comments.map(comment => ({
+        ...comment,
+        profiles: profiles.find(p => p.id === comment.user_id)
+  }));
 
   const handleNewComment = (newComment) => {
     setComments(prev => [...prev, newComment]);

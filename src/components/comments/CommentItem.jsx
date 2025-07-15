@@ -146,7 +146,8 @@ const CommentItem = ({
   };
 
   const getAvatarInitials = () => {
-    const name = comment.profiles?.full_name || comment.profiles?.username || 'U';
+    const name = comment.profiles?.full_name || comment.profiles?.username || 
+                comment.user_id?.slice(0, 2).toUpperCase() || 'U';
     return name.charAt(0).toUpperCase();
   };
 
