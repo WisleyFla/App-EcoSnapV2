@@ -1,12 +1,12 @@
 /* src/components/pages/part_Home/NewPostModal.css */
 
 .modal-content {
-  --modal-bg: #ffffff;
+  --modal-bg:  #2F4F4F;
   --modal-border-color: #e5e7eb;
-  --text-primary: #111827;
+  --text-primary: #ffffff;
   --text-secondary: #374151;
-  --text-tertiary: #6b7280;
-  --input-bg: #f9fafb;
+  --text-tertiary: #000000;
+  --input-bg: var(--input-bg);
   --input-border: #d1d5db;
   --btn-publish-bg: #374151;
   --btn-publish-text: #ffffff;

@@ -52,62 +52,106 @@ export const postsService = {
     }
   },
 
-  // Criar novo post (atualizado)
+  Perfeito! Obrigado por enviar o arquivo. Analisando o seu NewPostModal.jsx, vejo que ele é bem completo, com upload de mídias e seleção de mapa. Reutilizá-lo é, sem dúvida, a decisão certa.
+
+Para fazer essa integração funcionar da melhor forma e manter seu código organizado, vamos fazer o seguinte:
+
+Centralizar a Lógica: Moveremos a lógica complexa de criação de post (que hoje está dentro do modal) para o seu postsService.js. Isso torna o serviço a única fonte de verdade para criar posts.
+
+Simplificar o Modal: O NewPostModal.jsx ficará mais simples. Sua única responsabilidade será coletar os dados e chamar o serviço.
+
+Integrar na Página: A CommunityDetail.jsx irá chamar o modal simplificado, passando o communityId necessário.
+
+Passo 1: Centralizar a Lógica no postsService.js
+Vamos substituir sua função createPost atual por esta versão mais completa, que contém toda a lógica que estava no seu modal, incluindo o upload de mídias.
+
+Arquivo: src/services/postsService.js (Substitua a função createPost)
+
+JavaScript
+
+  // ... (outras funções do serviço)
+
+  // -- NOVA VERSÃO COMPLETA DA FUNÇÃO createPost --
   async createPost(postData) {
+    const toastId = toast.loading('Criando post...');
+    
     try {
+      // 1. Pega o usuário logado
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const { data, error } = await supabase
+      // 2. Cria o post inicial no banco para obter um ID
+      const tagsArray = postData.tags ? postData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+      
+      const { data: newPost, error: postError } = await supabase
         .from('posts')
         .insert({
           user_id: user.id,
-          content: postData.content,
-          visibility: 'public',
-          location: postData.location ? {
-            lat: postData.latitude,
-            lng: postData.longitude,
-            address: postData.location,
-            place_name: postData.locationName
-          } : null,
-          tags: postData.tags || [],
-          media_urls: postData.media_urls || []
+          content: postData.content.trim(),
+          tags: tagsArray,
+          location: postData.location,
+          media_urls: [], // Começa com array de mídias vazio
+          community_id: postData.communityId || null, // Associa à comunidade, se houver
         })
-        .select(`
-          *,
-          profiles!posts_user_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select()
         .single();
+      
+      if (postError) throw postError;
 
-      if (error) throw error;
+      // 3. Se houver arquivos, faz o upload e atualiza o post
+      let finalMediaUrls = [];
+      if (postData.filesToUpload && postData.filesToUpload.length > 0) {
+        toast.loading('Enviando mídias...', { id: toastId });
+        
+        // Usando o telegramService que você já tem
+        const uploadPromises = postData.filesToUpload.map(file => {
+          const isVideo = file.type.startsWith('video/');
+          return telegramService.uploadMedia(file, newPost.id, postData.content.trim(), isVideo);
+        });
+        
+        const uploadResults = await Promise.all(uploadPromises);
+        const successfulUploads = uploadResults.filter(r => r.success);
+        
+        if (successfulUploads.length < postData.filesToUpload.length) {
+          toast.error("Algumas mídias falharam ao enviar.");
+        }
+        finalMediaUrls = successfulUploads.map(r => r.download_url);
+        
+        // 4. Atualiza o post no banco com as URLs das mídias
+        if (finalMediaUrls.length > 0) {
+          const { error: updateError } = await supabase
+            .from('posts')
+            .update({ media_urls: finalMediaUrls })
+            .eq('id', newPost.id);
 
-      // Retornar no formato esperado
-      return {
-        id: data.id,
-        username: data.profiles?.full_name || data.profiles?.username || 'Usuário',
-        handle: `@${data.profiles?.username || 'usuario'}`,
-        time: 'agora',
-        content: data.content,
-        hashtags: data.tags ? data.tags.map(tag => `#${tag}`).join(' ') : '',
-        location: data.location?.address || 'Localização não informada',
-        likes: 0,
-        comments: 0,
-        reposts: 0,
-        isLiked: false,
-        originalPost: data,
-        profiles: data.profiles
-      };
+          if (updateError) throw updateError;
+          newPost.media_urls = finalMediaUrls; // Atualiza o objeto do post
+        }
+      }
+      
+      toast.dismiss(toastId);
+      toast.success('Post criado com sucesso!');
+      
+      // 5. Retorna o post completo para a UI
+      // Buscamos o perfil associado para ter todos os dados
+      const { data: authorProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) throw profileError;
+
+      return { ...newPost, profiles: authorProfile };
+
     } catch (error) {
-      console.error('Erro ao criar post:', error);
-      throw error;
+      toast.dismiss(toastId);
+      console.error('Erro ao criar post no serviço:', error);
+      // Lança o erro para que o componente possa tratá-lo se necessário
+      throw error; 
     }
   },
-
+  
   // Curtir/descurtir post (atualizado)
   async toggleLike(postId, userId) {
     try {

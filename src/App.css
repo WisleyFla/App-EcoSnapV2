@@ -24,6 +24,7 @@
     --trend-topic-color: #90EE90; /* Tópicos em verde claro */
     --search-bg: #2F4F4F; /* MUDADO: Azul esverdeado para busca */
     --search-border: rgba(255, 255, 255, 0.3); /* Borda da busca */
+    --modal-bg: #0d5c63; /* O seu azul-esverdeado para o tema claro */
 }
 
 /* CORRIGIDO: Tema Escuro usando data-theme em vez de dark-theme */
@@ -49,6 +50,7 @@ body[data-theme="dark"] {
     --trend-topic-color: #ffffff;
     --search-bg: #1a1a1a; /* Escuro para busca no tema escuro */
     --search-border: #333333;
+    --modal-bg: #2d2d2d; /* O cinza escuro que usamos antes para o tema escuro */
     
     background-color: #000000 !important;
     background-image: none !important;

@@ -20,6 +20,7 @@
     --avatar-bg: #275736;
     --trend-section-title: #275736;
     --trend-topic-color: #275736;
+    --modal-bg: #0d5c63; /* O seu azul-esverdeado para o tema claro */
 }
 
 /* ALTERADO: Tema Escuro usando data-theme em vez de classe dark-theme */
@@ -41,6 +42,7 @@ body[data-theme="dark"] {
     --avatar-bg: #333333; /* Avatar mais escuro */
     --trend-section-title: #ffffff;
     --trend-topic-color: #ffffff;
+    --modal-bg: #2d2d2d; /* O cinza escuro que usamos antes para o tema escuro */
 }
 
 /* --- Estilos Globais e Reset --- */
