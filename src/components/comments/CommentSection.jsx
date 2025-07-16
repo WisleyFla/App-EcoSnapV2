@@ -1,115 +1,132 @@
-// src/components/comments/CommentSection.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { commentsService } from '../../services/commentsService';
 import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import './CommentSection.css';
 
-const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
+export default function CommentSection({ postId, onCommentAdded, onCommentRemoved }) {
   const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
+    const fetchComments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const fetchedComments = await commentsService.getCommentsForPost(postId);
+        setComments(fetchedComments);
+      } catch (error) {
+        console.error('Error loading comments:', error);
+        setError('Não foi possível carregar os comentários.');
+        toast.error("Erro ao carregar comentários.");
+      } finally {
+        setLoading(false);
+      }
     };
-    getCurrentUser();
-  }, []);
 
-  useEffect(() => {
     if (postId) {
-      loadComments();
+      fetchComments();
     }
   }, [postId]);
 
-  const loadComments = async () => {
-    setLoading(true);
-    setError('');
-    
-    try { // O 'try' começa aqui
-      const { data, error: commentsError } = await supabase
-        .from('comments_with_profiles') // Usando a VIEW que criamos
-        .select('*')
-        .eq('post_id', postId)
-        .is('parent_id', null)
-        .order('created_at', { ascending: true });
-  
-      if (commentsError) {
-        throw commentsError;
-      }
-      setComments(data || []);
-  
-    } catch (err) { // <-- O bloco 'catch' que estava faltando
-      setError('Erro ao carregar comentários.');
-      console.error('Erro ao carregar comentários:', err);
-  
-    } finally { // <-- O bloco 'finally' que estava faltando
-      setLoading(false);
+  const handleAddComment = async (content, parentId = null) => {
+    try {
+      const newComment = await commentsService.addComment(postId, content);
+      setComments(prev => [...prev, newComment]);
+      onCommentAdded?.();
+      toast.success("Comentário adicionado!");
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error("Erro ao adicionar comentário.");
+      throw error;
     }
   };
 
-  const handleNewComment = (newComment) => {
-    setComments(prev => [...prev, newComment]);
-    onCommentAdded?.();
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm("Tem certeza que deseja apagar este comentário?")) return;
+    
+    try {
+      await commentsService.deleteComment(commentId);
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      onCommentRemoved?.();
+      toast.success("Comentário removido!");
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error("Erro ao apagar comentário.");
+    }
   };
 
-  const handleCommentDelete = (commentId) => {
-    setComments(prev => prev.filter(comment => comment.id !== commentId));
-    onCommentRemoved?.();
+  const handleUpdateComment = async (commentId, newContent) => {
+    try {
+      const updatedComment = await commentsService.updateComment(commentId, newContent);
+      setComments(prev => 
+        prev.map(c => c.id === commentId ? { ...c, ...updatedComment } : c)
+      );
+      toast.success("Comentário atualizado!");
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      toast.error("Erro ao atualizar comentário.");
+      throw error;
+    }
+  };
+  
+  const handleToggleCommentLike = async (commentId) => {
+    try {
+      await commentsService.toggleCommentLike(commentId, user.id);
+    } catch (error) {
+      console.error('Error toggling comment like:', error);
+      throw error;
+    }
   };
 
-  // ESTA É A FUNÇÃO CORRIGIDA PARA ATUALIZAR UM COMENTÁRIO NA LISTA PRINCIPAL
-  const handleCommentEdit = (commentId, updatedCommentData) => {
-    setComments(prevComments =>
-      prevComments.map(comment =>
-        comment.id === commentId
-          ? { ...comment, ...updatedCommentData }
-          : comment
-      )
-    );
-  };
-
-  const handleReply = () => {
+  const handleReply = (newReply) => {
+    setComments(prev => [...prev, newReply]);
     onCommentAdded?.();
   };
 
   return (
-    <div className="comment-section-inline">
-      <div className="inline-comment-form">
-        <CommentForm
-          postId={postId}
-          onCommentSubmit={handleNewComment}
-          placeholder="Adicione um comentário..."
-        />
-      </div>
+    <div className="comment-section-container">
+      {user && (
+        <div className="comment-form-container">
+          <CommentForm 
+            onSubmit={(content) => handleAddComment(content)}
+            placeholder="Adicione um comentário..."
+          />
+        </div>
+      )}
 
-      <div className="inline-comments-list">
-        {loading && <div className="inline-no-comments"><p>Carregando...</p></div>}
-        {error && <div className="inline-comments-error"><span>{error}</span></div>}
+      <div className="comments-list">
+        {loading && <div className="loading-comments">Carregando comentários...</div>}
         
-        {!loading && !error && comments.length === 0 && (
-          <div className="inline-no-comments">
-            <p>Seja o primeiro a comentar</p>
+        {error && (
+          <div className="comments-error">
+            {error} <button onClick={() => window.location.reload()}>Tentar novamente</button>
           </div>
         )}
 
-        {comments.map((comment) => (
-          <CommentItem
-            key={comment.id}
+        {!loading && !error && comments.length === 0 && (
+          <div className="no-comments">
+            <p>Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+          </div>
+        )}
+
+        {comments.map(comment => (
+          <CommentItem 
+            key={comment.id} 
             comment={comment}
+            onDelete={handleDeleteComment}
+            onUpdate={handleUpdateComment}
+            onToggleLike={handleToggleCommentLike}
             onReply={handleReply}
-            onDelete={handleCommentDelete}
-            onEdit={handleCommentEdit} // AQUI GARANTIMOS QUE A FUNÇÃO SEJA PASSADA
-            currentUserId={currentUser?.id}
+            currentUserId={user?.id}
             onCommentRemoved={onCommentRemoved}
           />
         ))}
       </div>
     </div>
   );
-};
-
-export default CommentSection;
+}

@@ -1,44 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { postsService } from '../../../services/postsService'; // A única dependência de serviço agora
+import { postsService } from '../../../services/postsService';
+
+// Componentes de UI e Ícones
 import { X, Edit3, MapPin } from 'lucide-react';
 import MediaUpload from '../../ui/MediaUpload';
 import LocationMapSelector from '../../ui/LocationMapSelector';
 import './NewPostModal.css';
 
-// Adicionamos 'communityId' como uma prop opcional
+// O 'communityId' é opcional. Se ele for passado, o post será associado a uma comunidade.
 export function NewPostModal({
   isOpen,
   onClose,
-  onCreatePost, // Renomeado para onSuccess para consistência
+  onCreatePost, // Função para ser chamada após o post ser criado com sucesso
   communityId = null,
   initialLocation,
   onGetQuickLocation,
   locationLoading
 }) {
-  // Estados do Formulário
+
+  // =============================================
+  // ESTADOS DO COMPONENTE (State)
+  // =============================================
+  
+  // Estados para os dados do formulário
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [filesToUpload, setFilesToUpload] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(initialLocation);
+
+  // Estados para controlar a UI
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMapSelector, setShowMapSelector] = useState(false);
 
+  // Efeito que sincroniza a localização, caso ela venha de um componente pai
   useEffect(() => {
     setCurrentLocation(initialLocation);
   }, [initialLocation]);
 
-  // Limpa o formulário quando o modal é fechado
+  // Efeito que limpa o formulário sempre que o modal é fechado
   useEffect(() => {
     if (!isOpen) {
       setContent('');
       setTags('');
       setFilesToUpload([]);
       setCurrentLocation(null);
+      setIsSubmitting(false); // Garante que o estado de 'submit' seja resetado
     }
   }, [isOpen]);
 
-  // A função de submit agora é muito mais simples
+
+  // =============================================
+  // FUNÇÕES DE AÇÃO (Event Handlers)
+  // =============================================
+
+  // Função principal para criar o post. Agora ela é bem mais simples.
   const handleSubmit = async () => {
     if (!content.trim()) {
       toast.error('O conteúdo do post não pode estar vazio!');
@@ -47,45 +63,136 @@ export function NewPostModal({
     
     setIsSubmitting(true);
     try {
+      // 1. Agrupa todos os dados do formulário em um único objeto
       const postData = {
         content,
         tags,
         filesToUpload,
         location: currentLocation,
-        communityId // Passa o ID da comunidade para o serviço
+        communityId // Passa o ID da comunidade para o serviço (será null se não existir)
       };
 
+      // 2. Chama a função centralizada no nosso serviço, que faz todo o trabalho pesado
       const newPost = await postsService.createPost(postData);
-      onCreatePost(newPost); // Retorna o novo post para a página pai
+      
+      // 3. Informa o componente pai que o post foi criado com sucesso
+      onCreatePost(newPost);
       onClose(); // Fecha o modal
 
     } catch (error) {
-      // O toast de erro já é mostrado pelo serviço, mas podemos adicionar um aqui se quisermos
-      console.error("Falha ao submeter o post do modal:", error);
+      // O toast de erro já é mostrado pelo serviço, então só logamos no console aqui
+      console.error("Falha ao submeter o post a partir do modal:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Funções de localização (sem alteração)
+  // Funções para gerenciar a seleção de localização no mapa
   const handleLocationSelect = (location) => {
     const locationName = location.name || 'Localização selecionada';
-    setCurrentLocation({ name: locationName, coordinates: { latitude: location.latitude, longitude: location.longitude } });
+    setCurrentLocation({
+      name: locationName,
+      fullAddress: locationName,
+      source: 'MapSelector',
+      coordinates: { latitude: location.latitude, longitude: location.longitude },
+    });
     setShowMapSelector(false);
   };
-  const handleRemoveLocation = () => { setCurrentLocation(null); toast('Localização removida.'); };
 
-  if (!isOpen) return null;
+  const handleRemoveLocation = () => {
+    setCurrentLocation(null);
+    toast('Localização removida.');
+  };
+
+
+  // Se o modal não estiver aberto, não renderiza nada
+  if (!isOpen) {
+    return null;
+  }
+
+  // =============================================
+  // RENDERIZAÇÃO DO COMPONENTE (JSX)
+  // =============================================
 
   return (
-    // O JSX do modal (toda a parte visual) continua exatamente o mesmo.
-    // Nenhuma alteração é necessária aqui.
     <>
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          {/* ... todo o seu JSX do modal, que já está correto ... */}
+          <div className="modal-header">
+            <h3 className="modal-title">Nova Observação</h3>
+            <button className="close-btn" onClick={onClose} aria-label="Fechar modal"><X size={20} /></button>
+          </div>
+
+          <div className="modal-body">
+            <div className="form-group">
+              <label htmlFor="observacao">O que você observou hoje?</label>
+              <textarea
+                id="observacao"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Compartilhe sua descoberta na natureza..."
+                rows={4}
+                autoFocus
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Mídia</label>
+              <MediaUpload onFilesChange={setFilesToUpload} maxFiles={4} />
+            </div>
+
+            <div className="form-group">
+              <label>Localização</label>
+              {currentLocation ? (
+                <div className="location-selected">
+                  <div className="location-display">
+                    <span>📍</span>
+                    <span>{currentLocation.name}</span>
+                  </div>
+                  <div className="location-change-actions">
+                    <button type="button" onClick={() => setShowMapSelector(true)} className="location-action-btn change">
+                      <Edit3 size={14} /> Alterar
+                    </button>
+                    <button type="button" onClick={handleRemoveLocation} className="location-action-btn remove">
+                      <X size={14} /> Remover
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="location-buttons-container">
+                  <button type="button" onClick={() => setShowMapSelector(true)} className="location-btn map">
+                    <MapPin size={16} /> Selecionar no Mapa
+                  </button>
+                  <button type="button" onClick={onGetQuickLocation} disabled={locationLoading} className="location-btn gps">
+                    {locationLoading ? 'Buscando...' : <><MapPin size={16} /> GPS Atual</>}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="tags">Tags</label>
+              <input
+                type="text"
+                id="tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="Ex: natureza, aves, manhã, trilha"
+              />
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button onClick={onClose} disabled={isSubmitting} className="cancel-btn">
+              Cancelar
+            </button>
+            <button onClick={handleSubmit} disabled={isSubmitting || !content.trim()} className="publish-btn">
+              {isSubmitting ? 'Publicando...' : 'Publicar'}
+            </button>
+          </div>
         </div>
       </div>
+
       <LocationMapSelector
         isOpen={showMapSelector}
         onClose={() => setShowMapSelector(false)}

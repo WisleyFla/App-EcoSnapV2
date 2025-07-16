@@ -1,99 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { MoreVertical, Edit, LogOut, Trash2 } from 'lucide-react';
 
-// --- Importações de Serviços e Contextos ---
+// Services
 import { communityService } from '../../../services/communityService';
+import { postsService } from '../../../services/postsService';
 import { useAuth } from '../../../context/AuthContext';
 
-// --- Importações de Componentes de UI ---
+// Components
 import PostCard from '../../posts/PostCard';
 import Loading from '../../ui/Loading';
 import EditCommunityModal from './EditCommunityModal';
-// Reutilizamos o modal de criação de post que você já tinha
-import { NewPostModal } from '../../pages/part_Home/NewPostModal'; 
+import { NewPostModal } from '../../pages/part_Home/NewPostModal';
 
-// --- Importações de Ícones e Estilos ---
-import { MoreVertical, Edit, LogOut, Trash2 } from 'lucide-react';
+// Styles
 import './community.css';
 
-
-// --- Início do Componente ---
 export default function CommunityDetail() {
-  // =============================================
-  // HOOKS E ESTADOS (State)
-  // =============================================
-  
-  // Hooks do React Router para obter parâmetros da URL e para navegação
+  // Hooks
   const { communityId } = useParams();
   const navigate = useNavigate();
-  
-  // Hook personalizado para obter o usuário logado
   const { user } = useAuth();
   
-  // Estados para armazenar os dados da página
-  const [community, setCommunity] = useState(null); // Guarda as informações da comunidade
-  const [posts, setPosts] = useState([]); // Guarda a lista de posts
-  const [membership, setMembership] = useState({ isMember: false, isOwner: false }); // Guarda o status do usuário na comunidade
+  // States
+  const [community, setCommunity] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [membership, setMembership] = useState({ isMember: false, isOwner: false });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
+  const [activeCommentSection, setActiveCommentSection] = useState(null);
 
-  // Estados para controlar a interface
-  const [loading, setLoading] = useState(true); // Controla a exibição da tela de carregamento
-  const [isProcessing, setIsProcessing] = useState(false); // Desativa botões durante uma ação
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Controla o menu de opções (três pontinhos)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Controla o modal de edição da comunidade
-  const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false); // Controla o modal de criação de post
-
-
-  // =============================================
-  // EFEITO PARA BUSCAR DADOS (useEffect)
-  // =============================================
-  
-  // Este bloco é executado quando o componente é carregado ou quando uma de suas dependências (communityId ou user) muda.
+  // Fetch community data
   useEffect(() => {
     async function fetchData() {
-      if (!user) return; // Só busca dados se o usuário estiver carregado
-
+      if (!user) return;
+      
       try {
         setLoading(true);
-        // Dispara todas as buscas de dados em paralelo para mais performance
-        const detailsPromise = communityService.getCommunityDetails(communityId);
-        const postsPromise = communityService.getCommunityPosts(communityId);
-        const membershipPromise = communityService.checkMembership(communityId, user.id);
-        
-        // Espera todas as buscas terminarem
         const [details, communityPosts, memStatus] = await Promise.all([
-          detailsPromise, 
-          postsPromise, 
-          membershipPromise
+          communityService.getCommunityDetails(communityId),
+          communityService.getCommunityPosts(communityId),
+          communityService.checkMembership(communityId, user.id)
         ]);
-
-        // Atualiza os estados do componente com os dados recebidos do serviço
+        
         setCommunity(details);
         setPosts(communityPosts);
         setMembership(memStatus);
-
       } catch (error) {
         toast.error("Não foi possível carregar a comunidade.");
-        navigate('/communities'); // Em caso de erro, volta para a lista
+        navigate('/communities');
       } finally {
-        setLoading(false); // Garante que o loading termine, mesmo com erro
+        setLoading(false);
       }
     }
     fetchData();
-  }, [communityId, user, navigate]); // Dependências do efeito
+  }, [communityId, user, navigate]);
 
-
-  // =============================================
-  // FUNÇÕES DE AÇÃO (Event Handlers)
-  // =============================================
-
-  // Função para quando o usuário clica em "Sair da Comunidade"
+  // Community actions
   const handleLeaveCommunity = async () => {
     if (!window.confirm("Tem certeza que deseja sair desta comunidade?")) return;
     
     setIsProcessing(true);
     try {
-      await communityService.toggleMembership(communityId, user.id, true); // 'true' indica que ele é membro e quer sair
+      await communityService.toggleMembership(communityId, user.id, true);
       toast.success("Você saiu da comunidade.");
       setMembership({ ...membership, isMember: false });
     } catch (error) {
@@ -103,7 +76,6 @@ export default function CommunityDetail() {
     }
   };
 
-  // Função para quando o dono clica em "Apagar Comunidade"
   const handleDeleteCommunity = async () => {
     if (!window.confirm("ATENÇÃO: Esta ação é irreversível e apagará a comunidade para todos. Deseja continuar?")) return;
 
@@ -118,85 +90,126 @@ export default function CommunityDetail() {
       setIsProcessing(false);
     }
   };
-  
-  // Função chamada quando o modal de edição salva com sucesso
+
   const handleCommunityUpdated = (updatedData) => {
-    // Atualiza os dados da comunidade na tela sem precisar recarregar a página
     setCommunity(prev => ({ ...prev, ...updatedData }));
     toast.success("Comunidade atualizada!");
-    setIsEditModalOpen(false); // Fecha o modal de edição
+    setIsEditModalOpen(false);
   };
 
-  // Função chamada quando um novo post é criado com sucesso
+  // Post actions
   const handlePostCreated = (newPost) => {
-    // Adiciona o novo post no topo da lista para feedback instantâneo
     setPosts(prevPosts => [newPost, ...prevPosts]);
-    // O toast de sucesso já é mostrado pelo serviço
-    setIsNewPostModalOpen(false); // Fecha o modal de criação de post
+    setIsNewPostModalOpen(false);
   };
 
+  const handleLike = async (postId) => {
+    try {
+      const { liked } = await postsService.toggleLike(postId, user.id);
+      
+      setPosts(currentPosts => 
+        currentPosts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              user_has_liked: liked,
+              likes_count: liked ? p.likes_count + 1 : p.likes_count - 1,
+            };
+          }
+          return p;
+        })
+      );
+    } catch (error) {
+      toast.error("Erro ao processar curtida.");
+      console.error(error);
+    }
+  };
 
-  // Se a página estiver carregando, mostra o componente de Loading
-  if (loading) {
-    return <Loading />;
-  }
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm("Tem certeza que deseja apagar esta publicação?")) return;
+    
+    try {
+      await postsService.deletePost(postId);
+      setPosts(currentPosts => currentPosts.filter(p => p.id !== postId));
+      toast.success("Publicação apagada.");
+    } catch (error) {
+      toast.error("Erro ao apagar publicação.");
+      console.error(error);
+    }
+  };
 
+  const handleToggleComments = (postId) => {
+    setActiveCommentSection(currentId => (currentId === postId ? null : postId));
+  };
 
-  // =============================================
-  // RENDERIZAÇÃO DO COMPONENTE (JSX)
-  // =============================================
+  if (loading) return <Loading />;
 
   return (
-    // Fragment <>...</> para agrupar o conteúdo da página e os modais
     <>
       <div className="community-detail-container">
         <main className="main-content">
-
-          {/* Cabeçalho da página otimizado para mobile */}
           <header className="community-header">
             <div className="header-left">
               <button className="back-btn" onClick={() => navigate(-1)}>←</button>
               <h1 className="community-title">{community?.name}</h1>
             </div>
             
-            <div className="options-menu-container">
-              {/* O botão de opções só aparece se houver alguma ação disponível */}
-              {(membership.isOwner || membership.isMember) && (
-                <button className="options-menu-btn" onClick={() => setIsMenuOpen(true)}>
+            {(membership.isOwner || membership.isMember) && (
+              <div className="options-menu-container">
+                <button 
+                  className="options-menu-btn" 
+                  onClick={() => setIsMenuOpen(true)}
+                >
                   <MoreVertical size={20} />
                 </button>
-              )}
 
-              {/* O menu dropdown que aparece quando isMenuOpen é true */}
-              {isMenuOpen && (
-                <div className="options-dropdown-menu">
-                  {membership.isOwner && (
-                    <>
-                      <button onClick={() => { setIsEditModalOpen(true); setIsMenuOpen(false); }} className="dropdown-item">
-                        <Edit size={16} /> Editar Comunidade
+                {isMenuOpen && (
+                  <div className="options-dropdown-menu">
+                    {membership.isOwner && (
+                      <>
+                        <button 
+                          onClick={() => { 
+                            setIsEditModalOpen(true); 
+                            setIsMenuOpen(false); 
+                          }} 
+                          className="dropdown-item"
+                        >
+                          <Edit size={16} /> Editar Comunidade
+                        </button>
+                        <button 
+                          onClick={() => { 
+                            handleDeleteCommunity(); 
+                            setIsMenuOpen(false); 
+                          }} 
+                          className="dropdown-item destructive"
+                        >
+                          <Trash2 size={16} /> Apagar Comunidade
+                        </button>
+                      </>
+                    )}
+                    {membership.isMember && !membership.isOwner && (
+                      <button 
+                        onClick={() => { 
+                          handleLeaveCommunity(); 
+                          setIsMenuOpen(false); 
+                        }} 
+                        className="dropdown-item"
+                      >
+                        <LogOut size={16} /> Sair da Comunidade
                       </button>
-                      <button onClick={() => { handleDeleteCommunity(); setIsMenuOpen(false); }} className="dropdown-item destructive">
-                        <Trash2 size={16} /> Apagar Comunidade
-                      </button>
-                    </>
-                  )}
-                  {membership.isMember && !membership.isOwner && (
-                    <button onClick={() => { handleLeaveCommunity(); setIsMenuOpen(false); }} className="dropdown-item">
-                      <LogOut size={16} /> Sair da Comunidade
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </header>
 
-          {/* Barra de Informações da Comunidade */}
           <section className="community-info-bar">
             <div className="community-avatar">
               {community?.avatar_url ? (
                 <img src={community.avatar_url} alt="Avatar da comunidade"/>
               ) : (
-                '🌿' // Ícone padrão
+                '🌿'
               )}
             </div>
             <div className="community-details">
@@ -207,12 +220,19 @@ export default function CommunityDetail() {
             </div>
           </section>
 
-          {/* Feed de Posts */}
           <div className="posts-feed">
             <h2>Publicações</h2>
             {posts.length > 0 ? (
               posts.map(post => (
-                <PostCard key={post.id} post={post} currentUser={user} />
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  currentUser={user}
+                  onLike={() => handleLike(post.id)}
+                  onDelete={() => handleDeletePost(post.id)}
+                  onToggleComments={() => handleToggleComments(post.id)}
+                  showComments={activeCommentSection === post.id}
+                />
               ))
             ) : (
               <div className="empty-posts-message">
@@ -223,7 +243,6 @@ export default function CommunityDetail() {
           </div>
         </main>
 
-        {/* Botão Flutuante para Adicionar Post */}
         <button 
           className="add-post-btn" 
           title="Nova Publicação"
@@ -233,16 +252,20 @@ export default function CommunityDetail() {
         </button>
       </div>
 
-      {/* Overlay para fechar o menu ao clicar fora */}
-      {isMenuOpen && <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}></div>}
+      {isMenuOpen && (
+        <div 
+          className="menu-overlay" 
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
 
-      {/* Renderização condicional dos Modais */}
       <EditCommunityModal 
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSuccess={handleCommunityUpdated}
         communityData={community}
       />
+
       <NewPostModal 
         isOpen={isNewPostModalOpen}
         onClose={() => setIsNewPostModalOpen(false)}

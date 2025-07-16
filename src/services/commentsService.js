@@ -1,109 +1,94 @@
-// src/services/commentsService.js
 import { supabase } from '../lib/supabase';
 
 export const commentsService = {
-  // Buscar comentários de um post
-  async getComments(postId) {
+  /**
+   * Busca os comentários de um post com informações completas
+   * @param {string} postId - ID do post
+   * @returns {Promise<Array>} Lista de comentários formatados
+   */
+  async getCommentsForPost(postId) {
     try {
       const { data, error } = await supabase
         .from('comments')
         .select(`
-          *,
-          profiles!comments_user_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
+          id,
+          content,
+          created_at,
+          updated_at,
+          post_id,
+          user_id,
+          profiles:user_id (id, full_name, username, avatar_url),
+          comment_likes (user_id)
         `)
         .eq('post_id', postId)
-        .is('parent_id', null) // Apenas comentários principais
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      return data.map(comment => {
+        const likes = comment.comment_likes || [];
+        return {
+          ...comment,
+          likes_count: likes.length,
+          user_has_liked: user ? likes.some(like => like.user_id === user.id) : false
+        };
+      });
     } catch (error) {
-      console.error('Erro ao buscar comentários:', error);
+      console.error("Erro ao buscar comentários:", error);
       throw error;
     }
   },
 
-  // Buscar respostas de um comentário
-  async getReplies(commentId) {
-    try {
-      const { data, error } = await supabase
-        .from('comments')
-        .select(`
-          *,
-          profiles!comments_user_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('parent_id', commentId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Erro ao buscar respostas:', error);
-      throw error;
-    }
-  },
-
-  // Criar novo comentário
-  async createComment(postId, content, parentId = null) {
+  /**
+   * Adiciona um novo comentário
+   * @param {string} postId - ID do post
+   * @param {string} content - Conteúdo do comentário
+   * @returns {Promise<Object>} Comentário criado
+   */
+  async addComment(postId, content) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!user) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: user.id,
-          content: content.trim(),
-          parent_id: parentId
+        .insert({ 
+          post_id: postId, 
+          user_id: user.id, 
+          content 
         })
         .select(`
-          *,
-          profiles!comments_user_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
+          id,
+          content,
+          created_at,
+          post_id,
+          user_id,
+          profiles:user_id (id, full_name, username, avatar_url)
         `)
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return { 
+        ...data, 
+        likes_count: 0, 
+        user_has_liked: false 
+      };
     } catch (error) {
-      console.error('Erro ao criar comentário:', error);
+      console.error("Erro ao adicionar comentário:", error);
       throw error;
     }
   },
 
-  // Deletar comentário
+  /**
+   * Remove um comentário
+   * @param {string} commentId - ID do comentário
+   * @returns {Promise<boolean>} True se bem sucedido
+   */
   async deleteComment(commentId) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      // Verificar se o comentário pertence ao usuário
-      const { data: comment, error: fetchError } = await supabase
-        .from('comments')
-        .select('user_id')
-        .eq('id', commentId)
-        .single();
-
-      if (fetchError) throw fetchError;
-      if (comment.user_id !== user.id) {
-        throw new Error('Você não tem permissão para deletar este comentário');
-      }
-
       const { error } = await supabase
         .from('comments')
         .delete()
@@ -112,157 +97,113 @@ export const commentsService = {
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Erro ao deletar comentário:', error);
+      console.error("Erro ao deletar comentário:", error);
       throw error;
     }
   },
 
-  // Editar comentário
+  /**
+   * Atualiza o conteúdo de um comentário
+   * @param {string} commentId - ID do comentário
+   * @param {string} newContent - Novo conteúdo
+   * @returns {Promise<Object>} Comentário atualizado
+   */
   async updateComment(commentId, newContent) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
       const { data, error } = await supabase
         .from('comments')
         .update({ 
-          content: newContent.trim(),
-          updated_at: new Date().toISOString()
+          content: newContent, 
+          updated_at: new Date().toISOString() 
         })
         .eq('id', commentId)
-        .eq('user_id', user.id) // Garantir que só o dono pode editar
         .select(`
-          *,
-          profiles!comments_user_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
+          id,
+          content,
+          created_at,
+          updated_at,
+          post_id,
+          user_id,
+          profiles:user_id (id, full_name, username, avatar_url)
         `)
         .single();
 
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Erro ao editar comentário:', error);
+      console.error("Erro ao atualizar comentário:", error);
       throw error;
     }
   },
 
-  // Configurar subscription para comentários em tempo real
-  subscribeToComments(postId, callback) {
-    const channel = supabase
-      .channel(`comments:${postId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'comments',
-          filter: `post_id=eq.${postId}`
-        },
-        async (payload) => {
-          // Buscar dados completos do novo comentário
-          const { data, error } = await supabase
-            .from('comments')
-            .select(`
-              *,
-              profiles!comments_user_id_fkey (
-                id,
-                username,
-                full_name,
-                avatar_url
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single();
+  /**
+   * Alterna curtida em um comentário
+   * @param {string} commentId - ID do comentário
+   * @param {string} userId - ID do usuário
+   * @returns {Promise<Object>} { liked: boolean }
+   */
+  async toggleCommentLike(commentId, userId) {
+    try {
+      // Verifica se já existe curtida
+      const { data: existingLike, error: selectError } = await supabase
+        .from('comment_likes')
+        .select()
+        .eq('comment_id', commentId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-          if (!error && data) {
-            callback({
-              type: 'INSERT',
-              comment: data
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'comments',
-          filter: `post_id=eq.${postId}`
-        },
-        (payload) => {
-          callback({
-            type: 'UPDATE',
-            comment: payload.new
+      if (selectError) throw selectError;
+
+      if (existingLike) {
+        // Remove curtida existente
+        const { error: deleteError } = await supabase
+          .from('comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_id', userId);
+
+        if (deleteError) throw deleteError;
+        return { liked: false };
+      } else {
+        // Adiciona nova curtida
+        const { error: insertError } = await supabase
+          .from('comment_likes')
+          .insert({ 
+            comment_id: commentId, 
+            user_id: userId 
           });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'comments',
-          filter: `post_id=eq.${postId}`
-        },
-        (payload) => {
-          callback({
-            type: 'DELETE',
-            commentId: payload.old.id
-          });
-        }
-      )
-      .subscribe();
 
-    return channel;
-  },
-
-  // Remover subscription
-  unsubscribeFromComments(channel) {
-    if (channel) {
-      supabase.removeChannel(channel);
+        if (insertError) throw insertError;
+        return { liked: true };
+      }
+    } catch (error) {
+      console.error("Erro ao alternar curtida:", error);
+      throw error;
     }
   },
 
-  // Buscar estatísticas de comentários
-  async getCommentsStats(postId) {
+  /**
+   * Busca a contagem de comentários para vários posts
+   * @param {Array<string>} postIds - IDs dos posts
+   * @returns {Promise<Object>} Mapa de contagens { postId: count }
+   */
+  async getCommentsCountForPosts(postIds) {
     try {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('comments')
-        .select('*', { count: 'exact', head: true })
-        .eq('post_id', postId);
+        .select('post_id, count')
+        .in('post_id', postIds)
+        .group('post_id');
 
       if (error) throw error;
-      return count || 0;
+
+      return data.reduce((acc, item) => {
+        acc[item.post_id] = item.count;
+        return acc;
+      }, {});
     } catch (error) {
-      console.error('Erro ao buscar estatísticas de comentários:', error);
-      return 0;
+      console.error("Erro ao buscar contagem de comentários:", error);
+      throw error;
     }
-  },
-
-  // Validar conteúdo do comentário
-  validateComment(content) {
-    if (!content || typeof content !== 'string') {
-      return { valid: false, error: 'Conteúdo é obrigatório' };
-    }
-
-    const trimmed = content.trim();
-    if (trimmed.length === 0) {
-      return { valid: false, error: 'Comentário não pode estar vazio' };
-    }
-
-    if (trimmed.length > 1000) {
-      return { valid: false, error: 'Comentário muito longo (máximo 1000 caracteres)' };
-    }
-
-    if (trimmed.length < 2) {
-      return { valid: false, error: 'Comentário muito curto (mínimo 2 caracteres)' };
-    }
-
-    return { valid: true, content: trimmed };
   }
 };
