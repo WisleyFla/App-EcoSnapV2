@@ -3,30 +3,37 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Outlet, 
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 
+// Componentes de Autenticação
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 
+// Componentes das Páginas
 import Home from './components/pages/part_Home/Home';
 import Profile from './components/pages/Profile';
 
+// --- [AQUI ESTÁ A CORREÇÃO] ---
+// O caminho foi atualizado para a nova pasta "communities_page"
+import CommunityList from './components/pages/communities_page/CommunityList';
+import CommunityDetail from './components/pages/communities_page/CommunityDetail';
+
+// Componentes de UI
 import Loading from './components/ui/Loading';
 
+// Contextos
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
-
+// Estilos
 import './index.css';
 import './App.css';
 
-// Ícones Lucide React para o Navbar
+// Ícones
 import { Home as HomeIcon, Users, Book, User, Sun } from 'lucide-react';
 
-// Componente de Layout para rotas autenticadas
 function AuthenticatedLayout() {
   const location = useLocation();
   const { isDarkMode, toggleTheme } = useTheme();
 
-  // Função para alternar tema com toast
   const handleToggleTheme = () => {
     toggleTheme();
     toast.success(`Tema ${isDarkMode ? 'claro' : 'escuro'} ativado!`);
@@ -55,7 +62,7 @@ function AuthenticatedLayout() {
             </Link>
           </li>
           <li className="nav-item">
-            <Link to="/communities" className={`nav-link ${location.pathname === '/communities' ? 'active' : ''}`}>
+            <Link to="/communities" className={`nav-link ${location.pathname.startsWith('/communities') ? 'active' : ''}`}>
               <Users className="nav-icon" />
               Comunidades
             </Link>
@@ -69,7 +76,6 @@ function AuthenticatedLayout() {
         </ul>
       </nav>
       
-      {/* Container principal do conteúdo com rolagem completa */}
       <main className="main-content">
         <div className="content-wrapper page-container">
           <Outlet />
@@ -79,7 +85,6 @@ function AuthenticatedLayout() {
   );
 }
 
-// Componente que verifica autenticação
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -87,24 +92,23 @@ function AppRoutes() {
     return <Loading />;
   }
 
+  const ProtectedRouteWrapper = () => {
+    return user ? <AuthenticatedLayout /> : <Navigate to="/login" replace />;
+  };
+
   return (
     <Routes>
-      {/* Rotas para usuários NÃO autenticados */}
-      {!user ? (
-        <>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </>
-      ) : (
-        /* Rotas para usuários AUTENTICADOS */
-        <Route element={<AuthenticatedLayout />}>
-          <Route index element={<Home />} />
-          <Route path="profile" element={<Profile />} />
-          {/* Adicione outras rotas autenticadas aqui */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      )}
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+      <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
+
+      <Route element={<ProtectedRouteWrapper />}>
+        <Route index element={<Home />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="communities" element={<CommunityList />} />
+        <Route path="communities/:communityId" element={<CommunityDetail />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>
   );
 }

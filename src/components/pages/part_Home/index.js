@@ -7,7 +7,7 @@ export { NewPostModal } from './NewPostModal';
 export { EmptyFeedMessage } from './EmptyFeedMessage';
 export { HomeLoading } from './HomeLoading';
 export { HomeError } from './HomeError';
-export { default as Communities } from './part_Communities';
+export { default as Communities } from '../communities_page/CommunityList';
 
 // Exportação padrão do componente Home
 export { default } from './Home';
