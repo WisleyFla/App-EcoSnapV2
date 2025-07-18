@@ -4,35 +4,47 @@ import React, { useState } from 'react';
 import { MessageCircle, Heart, Share2, MoreHorizontal, Trash2, Copy, Twitter, Facebook } from 'lucide-react';
 import CommentSection from '../comments/CommentSection';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { postsService } from '../../services/postsService';
 import { toast } from 'react-hot-toast';
 import DeletePostModal from './DeletePostModal';
 import './PostCard.css';
 
-const PostCard = ({
-    post,
-    currentUser,
-    onLike,
-    onDelete,
-    onToggleComments,
-    showComments = false
-}) => {
-    console.log('DADOS DO POST RECEBIDO PELO CARD:', post);
-
+const PostCard = ({ post, onDelete }) => {
     const { isDarkMode } = useTheme();
+    const { user: currentUser } = useAuth();
+    
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [commentsCount, setCommentsCount] = useState(Number(post.comments_count) || 0);
+    const [showComments, setShowComments] = useState(false);
+    const [isLiked, setIsLiked] = useState(post.user_has_liked);
+    const [likeCount, setLikeCount] = useState(post.likes_count || 0);
+    const [commentCount, setCommentCount] = useState(post.comments_count || 0);
     const [showShareOptions, setShowShareOptions] = useState(false);
 
     const isOwner = currentUser && post.user_id === currentUser.id;
 
+    const handleToggleLike = async () => {
+        const newLikeStatus = !isLiked;
+        setIsLiked(newLikeStatus);
+        setLikeCount(prev => newLikeStatus ? prev + 1 : prev - 1);
+        
+        try {
+            await postsService.toggleLike(post.id, currentUser.id);
+        } catch (error) {
+            setIsLiked(!newLikeStatus);
+            setLikeCount(prev => newLikeStatus ? prev - 1 : prev + 1);
+            toast.error("Erro ao curtir post.");
+        }
+    };
+
     const handleCommentAdded = () => {
-        setCommentsCount(prevCount => prevCount + 1);
+        setCommentCount(prevCount => prevCount + 1);
     };
 
     const handleCommentRemoved = () => {
-        setCommentsCount(prevCount => Math.max(0, prevCount - 1));
+        setCommentCount(prevCount => Math.max(0, prevCount - 1));
     };
 
     const formatTimeAgo = (dateString) => {
@@ -48,18 +60,15 @@ const PostCard = ({
     };
 
     const renderLocation = () => {
-        if (!post.location) {
-            return null;
-        }
+        if (!post.location) return null;
 
         let locationData = post.location;
 
-        // Garante que o dado seja um objeto, mesmo que venha como string JSON
         if (typeof locationData === 'string') {
             try {
                 locationData = JSON.parse(locationData);
             } catch (error) {
-                return locationData; // Retorna a string se não for um JSON válido
+                return locationData;
             }
         }
 
@@ -69,19 +78,14 @@ const PostCard = ({
                                    typeof locationData.coordinates.latitude === 'number' &&
                                    typeof locationData.coordinates.longitude === 'number';
 
-            // 1. Caso Ideal: Temos nome E coordenadas
             if (displayName && hasCoordinates) {
                 const lat = locationData.coordinates.latitude.toFixed(4);
                 const lon = locationData.coordinates.longitude.toFixed(4);
                 return `${displayName} · Lat: ${lat}, Lon: ${lon}`;
             }
 
-            // 2. Fallback: Temos apenas o nome
-            if (displayName) {
-                return displayName;
-            }
+            if (displayName) return displayName;
 
-            // 3. Fallback: Temos apenas as coordenadas
             if (hasCoordinates) {
                 const lat = locationData.coordinates.latitude.toFixed(4);
                 const lon = locationData.coordinates.longitude.toFixed(4);
@@ -89,10 +93,7 @@ const PostCard = ({
             }
         }
         
-        // Retorna a string original se for o caso
-        if (typeof post.location === 'string') {
-            return post.location;
-        }
+        if (typeof post.location === 'string') return post.location;
 
         return 'Localização não informada';
     };
@@ -126,27 +127,28 @@ const PostCard = ({
     };
 
     const renderTags = () => {
-        if (!post.tags || !Array.isArray(post.tags) || post.tags.length === 0) return null;
+        // Verificação com bloco de código delimitado por chaves
+        if (!post.tags || !Array.isArray(post.tags) || post.tags.length === 0) {
+            return null;
+        }
+        
         return (
             <div className="post-tags">
-                {post.tags.filter(tag => typeof tag === 'string').map((tag, index) => (
-                    <span key={index} className="tag">#{tag}</span>
+            {post.tags
+                .filter(tag => typeof tag === 'string') // Filtra apenas strings
+                .map((tag, index) => (
+                <span key={index} className="tag">#{tag}</span>
                 ))}
             </div>
         );
     };
     
-    // FUNÇÃO ATUALIZADA PARA SUPORTE A VÍDEO
     const renderMedia = () => {
-        if (!post.media_urls || !Array.isArray(post.media_urls) || post.media_urls.length === 0) {
-            return null;
-        }
+        if (!post.media_urls || !Array.isArray(post.media_urls)) return null;
         
         const validUrls = post.media_urls.filter(url => typeof url === 'string' && url);
-
         if (validUrls.length === 0) return null;
 
-        // Se houver apenas uma mídia
         if (validUrls.length === 1) {
             const url = validUrls[0];
             const isVideo = url.endsWith('.mp4') || url.endsWith('.webm');
@@ -166,7 +168,6 @@ const PostCard = ({
             );
         }
 
-        // Se houver múltiplas mídias (grid)
         return (
             <div className={`post-media-container grid-layout grid-${Math.min(validUrls.length, 4)}`}>
                 {validUrls.slice(0, 4).map((url, index) => {
@@ -250,23 +251,83 @@ const PostCard = ({
                     <div className="post-content">{post.content}</div>
                     {renderTags()}
                     {renderMedia()}
-                    <div className="post-location">
-                        <svg className="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                        <span>{renderLocation()}</span>
-                    </div>
+                    {post.location && (
+                        <div className="post-location">
+                            <svg className="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                            <span>{renderLocation()}</span>
+                        </div>
+                    )}
                 </div>
 
                 <footer className="post-actions">
-                    <button className={`action-button like-button ${post.user_has_liked ? 'liked' : ''}`} onClick={() => onLike(post.id)} aria-label={post.user_has_liked ? 'Descurtir' : 'Curtir'}><Heart size={18} fill={post.user_has_liked ? 'currentColor' : 'none'} /><span>{Number(post.likes_count) || 0}</span></button>
-                    <button className="action-button comment-button" onClick={() => onToggleComments(post.id)} aria-label="Comentários"><MessageCircle size={18} /><span>{commentsCount}</span></button>
-                    <button className="action-button share-button" onClick={() => { if (navigator.share) { handleNativeShare(); } else { setShowShareOptions(true); } }} aria-label="Compartilhar"><Share2 size={18} /></button>
+                    <button className={`action-button like-button ${isLiked ? 'liked' : ''}`} onClick={handleToggleLike} aria-label={isLiked ? 'Descurtir' : 'Curtir'}>
+                        <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
+                        <span>{likeCount}</span>
+                    </button>
+                    <button className="action-button comment-button" onClick={() => setShowComments(!showComments)} aria-label="Comentários">
+                        <MessageCircle size={18} />
+                        <span>{commentCount}</span>
+                    </button>
+                    <button className="action-button share-button" onClick={() => { if (navigator.share) { handleNativeShare(); } else { setShowShareOptions(true); } }} aria-label="Compartilhar">
+                        <Share2 size={18} />
+                    </button>
                 </footer>
 
-                {showComments && ( <div className="post-comments"><CommentSection postId={post.id} onCommentAdded={handleCommentAdded} onCommentRemoved={handleCommentRemoved} /></div> )}
+                {showComments && (
+                    <div className="post-comments">
+                        <CommentSection 
+                            postId={post.id} 
+                            onCommentAdded={handleCommentAdded} 
+                            onCommentRemoved={handleCommentRemoved} 
+                        />
+                    </div>
+                )}
             </article>
 
-            <DeletePostModal isOpen={showDeleteConfirm} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} isDeleting={isDeleting} postContent={post.content}/>
-            {showShareOptions && ( <div className="modal-overlay" onClick={() => setShowShareOptions(false)}><div className="share-modal" onClick={(e) => e.stopPropagation()}><div className="modal-header"><h3>Compartilhar Post</h3></div><div className="modal-body"><div className="share-options"><button onClick={copyToClipboard} className="share-option"><Copy size={24} /> <span>Copiar link</span></button><a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(generateShareLink(post.id))}&text=${encodeURIComponent(post.content.substring(0, 100))}`} target="_blank" rel="noopener noreferrer" className="share-option"><Twitter size={24} /> <span>Twitter</span></a><a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(generateShareLink(post.id))}`} target="_blank" rel="noopener noreferrer" className="share-option"><Facebook size={24} /> <span>Facebook</span></a><a href={`whatsapp://send?text=${encodeURIComponent(`Confira este post: ${generateShareLink(post.id)}`)}`} className="share-option"><Share2 size={24} /> <span>WhatsApp</span></a></div></div><div className="modal-footer"><button onClick={() => setShowShareOptions(false)} className="button-secondary">Fechar</button></div></div></div>)}
+            <DeletePostModal 
+                isOpen={showDeleteConfirm} 
+                onConfirm={handleDeleteConfirm} 
+                onCancel={handleDeleteCancel} 
+                isDeleting={isDeleting} 
+                postContent={post.content}
+            />
+
+            {showShareOptions && (
+                <div className="modal-overlay" onClick={() => setShowShareOptions(false)}>
+                    <div className="share-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Compartilhar Post</h3>
+                        </div>
+                        <div className="modal-body">
+                            <div className="share-options">
+                                <button onClick={copyToClipboard} className="share-option">
+                                    <Copy size={24} /> <span>Copiar link</span>
+                                </button>
+                                <a 
+                                    href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(generateShareLink(post.id))}&text=${encodeURIComponent(post.content.substring(0, 100))}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="share-option"
+                                >
+                                    <Twitter size={24} /> <span>Twitter</span>
+                                </a>
+                                <a 
+                                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(generateShareLink(post.id))}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="share-option"
+                                >
+                                    <Facebook size={24} /> <span>Facebook</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button onClick={() => setShowShareOptions(false)} className="button-secondary">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showMenu && <div className="menu-overlay" onClick={() => setShowMenu(false)} />}
         </>
     );

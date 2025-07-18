@@ -48,6 +48,8 @@ export function NewPostModal({
       setIsSubmitting(false); // Garante que o estado de 'submit' seja resetado
     }
   }, [isOpen]);
+  
+  console.log("NewPostModal renderizando. Prop 'isOpen' recebida:", isOpen);
 
 
   // =============================================

@@ -1,20 +1,22 @@
-// src/components/comments/CommentForm.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import { Send } from 'lucide-react';
 
 const CommentForm = ({ 
-  postId, 
-  parentId = null, 
-  onCommentSubmit, 
+  postId,
+  parentId = null,
+  onSubmit,
+  onCommentSubmit,
   onCancel,
-  placeholder = "Escreva um comentário...",
-  autoFocus = false 
+  placeholder = "Adicione um comentário...",
+  autoFocus = false,
+  isReply = false
 }) => {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const textareaRef = useRef(null);
+
+  const submitHandler = onCommentSubmit || onSubmit;
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -22,24 +24,19 @@ const CommentForm = ({
     }
   }, [autoFocus]);
 
-  // Auto-resize do textarea
   const handleTextareaChange = (e) => {
     const value = e.target.value;
     setContent(value);
     setError('');
 
-    // Auto-resize
     const textarea = e.target;
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
   };
 
   const validateComment = (content) => {
-    if (!content || typeof content !== 'string') {
-      return { valid: false, error: 'Conteúdo é obrigatório' };
-    }
-
     const trimmed = content.trim();
+    
     if (trimmed.length === 0) {
       return { valid: false, error: 'Comentário não pode estar vazio' };
     }
@@ -48,20 +45,20 @@ const CommentForm = ({
       return { valid: false, error: 'Comentário muito longo (máximo 1000 caracteres)' };
     }
 
-    if (trimmed.length < 2) {
-      return { valid: false, error: 'Comentário muito curto (mínimo 2 caracteres)' };
-    }
-
     return { valid: true, content: trimmed };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validar conteúdo
     const validation = validateComment(content);
     if (!validation.valid) {
       setError(validation.error);
+      return;
+    }
+
+    if (!submitHandler) {
+      setError('Função de envio não definida');
       return;
     }
 
@@ -69,54 +66,33 @@ const CommentForm = ({
     setError('');
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError('Erro de autenticação');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: user.id,
-          content: validation.content,
-          parent_id: parentId
-        })
-        .select('*')
-        .single();
-
-      if (error) throw error;
-      
-      // Buscar perfil separadamente para evitar erro de foreign key
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, username, full_name, avatar_url')
-        .eq('id', user.id)
-        .single();
-
-      const commentWithProfile = {
-        ...data,
-        profiles: profile || {
-          id: user.id,
-          username: 'usuario',
-          full_name: 'Usuário',
+      const newComment = {
+        id: Date.now(),
+        content: validation.content,
+        post_id: postId,
+        parent_id: parentId,
+        user_id: 'current-user-id',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        likes_count: 0,
+        replies_count: 0,
+        user_has_liked: false,
+        profiles: {
+          id: 'current-user-id',
+          username: 'usuario_exemplo',
+          full_name: 'Usuário Exemplo',
           avatar_url: null
         }
       };
-      
-      // Limpar formulário
+
+      await submitHandler(newComment);
       setContent('');
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
-
-      // Notificar componente pai
-      onCommentSubmit?.(commentWithProfile);
       
-      // Se é uma resposta, cancelar após enviar
-      if (parentId) {
-        onCancel?.();
+      if (isReply && onCancel) {
+        onCancel();
       }
     } catch (err) {
       setError(err.message || 'Erro ao enviar comentário');
@@ -126,15 +102,13 @@ const CommentForm = ({
   };
 
   const handleKeyDown = (e) => {
-    // Enviar com Ctrl+Enter
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSubmit(e);
     }
     
-    // Cancelar com Escape (apenas para respostas)
-    if (e.key === 'Escape' && parentId) {
-      onCancel?.();
+    if (e.key === 'Escape' && isReply && onCancel) {
+      onCancel();
     }
   };
 
@@ -157,7 +131,6 @@ const CommentForm = ({
           maxLength={1000}
         />
         
-        {/* Contador de caracteres */}
         {content.length > 0 && (
           <div className={`char-counter ${isNearLimit ? 'warning' : ''} ${isOverLimit ? 'error' : ''}`}>
             {remainingChars}
@@ -165,7 +138,6 @@ const CommentForm = ({
         )}
       </div>
 
-      {/* Mensagem de erro */}
       {error && (
         <div className="comment-error">
           <svg className="error-icon" viewBox="0 0 20 20" fill="currentColor">
@@ -175,14 +147,13 @@ const CommentForm = ({
         </div>
       )}
 
-      {/* Ações do formulário */}
       <div className="comment-actions">
         <div className="comment-hint">
           <span>Ctrl+Enter para enviar</span>
         </div>
         
         <div className="comment-buttons">
-          {parentId && (
+          {isReply && onCancel && (
             <button
               type="button"
               onClick={onCancel}
@@ -206,7 +177,10 @@ const CommentForm = ({
                 Enviando...
               </>
             ) : (
-              <Send size={14} />
+              <>
+                <Send size={14} />
+                {isReply ? 'Responder' : 'Enviar'}
+              </>
             )}
           </button>
         </div>
