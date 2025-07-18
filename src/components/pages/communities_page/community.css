@@ -360,6 +360,30 @@
   background-color: #f0f0f0;
 }
 
+/* Adicione este estilo ao final do seu arquivo community.css */
+.join-card-btn {
+  margin-left: auto; /* Empurra o botão para a direita */
+  background-color: transparent;
+  color: #22c55e;
+  border: 1px solid #22c55e;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.join-card-btn:hover {
+  background-color: #22c55e;
+  color: white;
+}
+
+.join-card-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Ajuste para telas maiores (igual ao da home) */
 @media (min-width: 769px) {
   .add-post-btn {

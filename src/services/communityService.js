@@ -13,11 +13,35 @@ export const communityService = {
       return { ...community, members_count: members.length, is_member: isMember };
     });
   },
+  
   async getCommunityDetails(communityId) {
-    const { data, error } = await supabase.from('communities').select(`*,profiles!created_by ( full_name, username )`).eq('id', communityId).single();
-    if (error) { console.error("Supabase error fetching community details:", error); throw error; }
-    return data;
+    const { data, error } = await supabase
+      .from('communities')
+      .select(`
+        *,
+        profiles!created_by ( full_name, username ),
+        community_members ( count )
+      `)
+      .eq('id', communityId)
+      .single();
+
+    if (error) { 
+      console.error("Supabase error fetching community details:", error); 
+      throw error; 
+    }
+
+    // Remodelamos os dados para facilitar o uso no componente
+    const communityData = {
+        ...data,
+        // A contagem vem dentro de um array, então a extraímos aqui
+        members_count: data.community_members[0]?.count || 0
+    };
+    // Removemos o array aninhado que não precisamos mais
+    delete communityData.community_members;
+
+    return communityData;
   },
+  
   async getCommunityPosts(communityId) {
     const { data, error } = await supabase.from('posts').select(`*,profiles!user_id (id, full_name, username, avatar_url),likes:likes(count),comments:comments(count)`).eq('community_id', communityId).order('created_at', { ascending: false });
     if (error) { console.error("Supabase error fetching community posts:", error); throw error; }

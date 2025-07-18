@@ -80,54 +80,34 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true)
       
-      // 1. Criar conta no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Apenas cria a conta no Supabase Auth.
+      // O nosso gatilho no banco de dados cuidará de criar o perfil.
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          // Passamos os dados extras para o gatilho usar
           data: {
-            display_name: userData.displayName || email.split('@')[0],
+            full_name: userData.full_name,
+            username: userData.username,
           }
         }
-      })
+      });
 
-      if (authError) throw authError
+      if (error) throw error;
 
-      // 2. Criar perfil na tabela users
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email,
-            username: userData.username || email.split('@')[0],
-            display_name: userData.displayName || email.split('@')[0],
-            bio: userData.bio || '',
-            role: userData.role || 'estudante', // Role padrão
-            institution: userData.institution || '',
-            grade_year: userData.gradeYear || '',
-            specialization: userData.specialization || []
-          })
-
-        if (profileError) {
-          console.error('Erro ao criar perfil:', profileError)
-          // Continuar mesmo se der erro no perfil
-        }
-      }
-
-      return authData
+      return data;
     } catch (error) {
-      console.error('Erro no registro:', error)
-      
+      console.error('Erro no registro:', error);
       if (error.message.includes('already registered')) {
-        throw new Error('Este email já está cadastrado')
+        throw new Error('Este email já está cadastrado');
       } else if (error.message.includes('Password should be at least')) {
-        throw new Error('A senha deve ter pelo menos 6 caracteres')
+        throw new Error('A senha deve ter pelo menos 6 caracteres');
       } else {
-        throw new Error(error.message || 'Erro ao criar conta')
+        throw new Error(error.message || 'Erro ao criar conta');
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 

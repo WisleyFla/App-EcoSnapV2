@@ -60,6 +60,26 @@ export default function CommunityDetail() {
     fetchData();
   }, [communityId, user, navigate]);
 
+  const handleJoinCommunity = async () => {
+    setIsProcessing(true);
+    try {
+      // Usamos a mesma função de serviço, mas com 'false' para indicar que é para entrar
+      await communityService.toggleMembership(communityId, user.id, false);
+      toast.success("Bem-vindo(a) à comunidade!");
+      
+      // Atualiza o estado local para refletir que o usuário agora é membro
+      setMembership({ ...membership, isMember: true });
+      
+      // Atualiza a contagem de membros na tela
+      setCommunity(prev => ({ ...prev, members_count: (prev.members_count || 0) + 1 }));
+
+    } catch (error) {
+      toast.error("Erro ao entrar na comunidade.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Community actions
   const handleLeaveCommunity = async () => {
     if (!window.confirm("Tem certeza que deseja sair desta comunidade?")) return;
@@ -69,6 +89,10 @@ export default function CommunityDetail() {
       await communityService.toggleMembership(communityId, user.id, true);
       toast.success("Você saiu da comunidade.");
       setMembership({ ...membership, isMember: false });
+
+      // ---> ADICIONE A LINHA ABAIXO PARA DECREMENTAR O CONTADOR <---
+      setCommunity(prev => ({ ...prev, members_count: Math.max(0, (prev.members_count || 0) - 1) }));
+
     } catch (error) {
       toast.error("Erro ao sair da comunidade.");
     } finally {
