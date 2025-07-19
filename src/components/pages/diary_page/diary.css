@@ -1,0 +1,224 @@
+/* diary.css atualizado para usar variáveis de tema globais */
+
+.conteudo-principal {
+    flex: 1;
+    margin-bottom: 100px;
+    padding: 20px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.titulo-diario {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    padding-left: 5px;
+    color: var(--text-color-main); /* Usa a variável de tema */
+}
+
+.formulario-diario, .entrada-diario {
+    background-color: var(--post-bg); /* Usa a variável de tema */
+    color: var(--post-text-color); /* Usa a variável de tema */
+    border: 1px solid var(--post-border); /* Usa a variável de tema */
+    border-radius: 15px; /* Consistência com os posts */
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: background-color 0.3s, border-color 0.3s;
+    backdrop-filter: blur(10px); /* Efeito de vidro */
+}
+
+.barra-de-ferramentas {
+    display: flex;
+    gap: 5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--post-border); /* Usa a variável de tema */
+}
+
+.botao-barra-de-ferramentas {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 16px;
+    color: var(--text-color-main); /* Usa a variável de tema */
+    transition: background-color 0.2s;
+}
+
+.botao-barra-de-ferramentas:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Efeito de hover padrão */
+}
+
+.editor-de-texto {
+    min-height: 150px;
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    line-height: 1.6;
+    outline: none;
+    border-radius: 5px;
+    color: var(--input-text); /* Usa a variável de tema */
+    background-color: var(--input-bg); /* Usa a variável de tema */
+    border: 1px solid var(--post-border); /* Usa a variável de tema */
+}
+
+.editor-de-texto:empty::before {
+    content: 'Comece a escrever sua anotação aqui...';
+    color: var(--input-placeholder); /* Usa a variável de tema */
+    cursor: text;
+}
+
+#lista-arquivos-selecionados {
+    font-size: 12px;
+    color: var(--secondary-text-color); /* Usa a variável de tema */
+    margin-top: 5px;
+    display: block;
+}
+
+.rodape-formulario {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.grupo-campos-esquerda {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.grupo-acoes-direita {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.botao-midia-label {
+    font-size: 14px;
+    color: var(--input-text); /* Usa a variável de tema */
+    cursor: pointer;
+    border-radius: 8px;
+    background-color: var(--input-bg); /* Usa a variável de tema */
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    height: 43px; 
+    padding: 8px 12px;
+    border: 1px solid var(--post-border); /* Usa a variável de tema */
+}
+
+.botao-midia-label:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.campo-data {
+    background-color: var(--input-bg); /* Usa a variável de tema */
+    border: 1px solid var(--post-border); /* Usa a variável de tema */
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--input-text); /* Usa a variável de tema */
+    font-size: 14px;
+    height: 43px;
+}
+
+/* Para garantir que o seletor de data funcione bem em ambos os temas */
+body[data-theme="light"] .campo-data {
+    color-scheme: light;
+}
+
+body[data-theme="dark"] .campo-data {
+    color-scheme: dark;
+}
+
+.botao-enviar {
+    background-color: var(--follow-btn-bg); /* Usa a variável de tema */
+    color: #ffffff;
+    border: 2px solid var(--follow-btn-border); /* Usa a variável de tema */
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s, border-color 0.2s;
+    height: 43px;
+}
+
+.botao-enviar:hover {
+    transform: scale(1.05);
+}
+
+.cabecalho-entrada {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.data-entrada {
+    font-weight: 500;
+    color: var(--hashtag-color); /* Usa a variável de tema */
+    font-size: 14px;
+}
+
+.conteudo-entrada {
+    line-height: 1.7;
+    font-size: 16px;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+}
+
+.conteudo-entrada code {
+    background-color: rgba(144, 238, 144, 0.2);
+    color: var(--hashtag-color); /* Usa a variável de tema */
+    padding: .2em .4em;
+    border-radius: 3px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+
+.acoes-entrada {
+    display: flex;
+    gap: 10px;
+}
+
+.botao-acao-entrada {
+    background: none;
+    border: none;
+    color: var(--secondary-text-color); /* Usa a variável de tema */
+    cursor: pointer;
+    padding: 5px;
+    font-size: 18px;
+}
+
+.botao-acao-entrada:hover {
+    color: var(--hashtag-color); /* Usa a variável de tema */
+}
+
+.item-tarefa {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.item-tarefa input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--hashtag-color); /* Usa a variável de tema */
+}
+
+.midia-entrada {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap; 
+    gap: 10px;
+}
+
+.midia-entrada img, .midia-entrada video {
+    max-width: 100%; 
+    max-height: 300px;
+    flex: 1 1 200px; 
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--post-border); /* Usa a variável de tema */
+}

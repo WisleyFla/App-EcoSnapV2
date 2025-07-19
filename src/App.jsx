@@ -10,11 +10,9 @@ import Register from './components/auth/Register';
 // Componentes das Páginas
 import Home from './components/pages/part_Home/Home';
 import Profile from './components/pages/Profile';
-
-// --- [AQUI ESTÁ A CORREÇÃO] ---
-// O caminho foi atualizado para a nova pasta "communities_page"
 import CommunityList from './components/pages/communities_page/CommunityList';
 import CommunityDetail from './components/pages/communities_page/CommunityDetail';
+import DiaryPage from './components/pages/diary_page/DiaryPage'; // Importa a página do Diário
 
 // Componentes de UI
 import Loading from './components/ui/Loading';
@@ -104,6 +102,7 @@ function AppRoutes() {
       <Route element={<ProtectedRouteWrapper />}>
         <Route index element={<Home />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="diary" element={<DiaryPage />} /> {/* Adiciona a rota para o Diário */}
         <Route path="communities" element={<CommunityList />} />
         <Route path="communities/:communityId" element={<CommunityDetail />} />
       </Route>
