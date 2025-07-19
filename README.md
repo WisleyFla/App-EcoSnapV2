@@ -1,5 +1,7 @@
 # 🌱 EcoSnap
 
+<img width="400" height="400" alt="Image" src="https://github.com/user-attachments/assets/60624a24-eeac-42ef-89f1-c97122acbe91" />
+
 > Promovendo ciência cidadã, educação participativa e preservação ambiental do Cerrado brasileiro.
 
 
