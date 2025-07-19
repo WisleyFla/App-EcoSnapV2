@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from '../../ui/Icons'; // Importa o componente de ícone
 
 const DiaryEntry = ({ entry, onDelete }) => {
     const { id, date, content, media } = entry;
@@ -12,7 +13,10 @@ const DiaryEntry = ({ entry, onDelete }) => {
             <div className="cabecalho-entrada">
                 <div className="data-entrada">{formattedDate}</div>
                 <div className="acoes-entrada">
-                    <button className="botao-acao-entrada" title="Excluir" onClick={() => onDelete(id)}>&#128465;</button>
+                    {/* Adicionada a classe "delete" para o estilo de hover */}
+                    <button className="botao-acao-entrada delete" title="Excluir" onClick={() => onDelete(id)}>
+                        <Icon name="delete" size={18} />
+                    </button>
                 </div>
             </div>
             <div className="conteudo-entrada" dangerouslySetInnerHTML={{ __html: content }}></div>

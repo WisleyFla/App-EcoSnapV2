@@ -1,36 +1,121 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Icon from '../../ui/Icons'; // Importa o componente de ícone
 
-const DiaryEntry = ({ entry, onDelete }) => {
-    const { id, date, content, media } = entry;
+const DiaryForm = ({ onAddEntry }) => {
+    const [content, setContent] = useState('');
+    const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+    const [media, setMedia] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState('');
 
-    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
-        day: 'numeric', month: 'long', year: 'numeric'
-    });
+    const handleContentChange = (e) => {
+        setContent(e.target.innerHTML);
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files.length > 0) {
+            const fileNames = Array.from(e.target.files).map(file => file.name).join(', ');
+            setSelectedFiles(`${e.target.files.length} arquivo(s) selecionado(s): ${fileNames}`);
+            
+            const mediaPromises = Array.from(e.target.files).map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        resolve({
+                            url: event.target.result,
+                            type: file.type,
+                            name: file.name
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(mediaPromises).then(mediaItems => {
+                setMedia(mediaItems);
+            });
+
+        } else {
+            setSelectedFiles('');
+            setMedia([]);
+        }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!content.trim() && media.length === 0) {
+            alert('Por favor, escreva algo ou adicione mídias à sua anotação!');
+            return;
+        }
+        onAddEntry({ content, date, media });
+        setContent('');
+        setMedia([]);
+        setSelectedFiles('');
+        document.getElementById('editorDeTexto').innerHTML = '';
+        setDate(new Date().toISOString().slice(0, 10));
+    };
+    
+    const formatDoc = (cmd, value = null) => {
+        document.execCommand(cmd, false, value);
+        document.getElementById('editorDeTexto').focus();
+    }
+
+    const addChecklist = () => {
+        const checklistId = `task-${Date.now()}`;
+        const checklistHtml = `<div class="item-tarefa" contenteditable="false"><input type="checkbox" id="${checklistId}"><label for="${checklistId}" contenteditable="true">Nova tarefa...</label></div>`;
+        formatDoc('insertHTML', checklistHtml);
+    }
+
 
     return (
-        <div className="entrada-diario">
-            <div className="cabecalho-entrada">
-                <div className="data-entrada">{formattedDate}</div>
-                <div className="acoes-entrada">
-                    {/* Adicionada a classe "delete" para o estilo de hover */}
-                    <button className="botao-acao-entrada delete" title="Excluir" onClick={() => onDelete(id)}>
-                        <Icon name="delete" size={18} />
+        <div className="formulario-diario">
+             <div className="barra-de-ferramentas">
+                <button className="botao-barra-de-ferramentas" onClick={() => formatDoc('bold')}><b>B</b></button>
+                <button className="botao-barra-de-ferramentas" onClick={() => formatDoc('italic')}><i>I</i></button>
+                <button className="botao-barra-de-ferramentas" onClick={() => formatDoc('insertHTML', '&nbsp;<code contenteditable=\'false\'>CÓDIGO</code>&nbsp;')}><b>&lt;/&gt;</b></button>
+                <button className="botao-barra-de-ferramentas" onClick={addChecklist}>
+                    <Icon name="check" size={16} /> Tarefa
+                </button>
+            </div>
+
+            <div 
+                id="editorDeTexto"
+                className="editor-de-texto" 
+                contentEditable="true"
+                onInput={handleContentChange}
+            ></div>
+
+            <span id="lista-arquivos-selecionados">{selectedFiles}</span>
+
+            <div className="rodape-formulario">
+                <div className="grupo-campos-esquerda">
+                    <input 
+                        type="date" 
+                        className="campo-data" 
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                    />
+                    <label htmlFor="uploadDeMidia" className="botao-midia-label">
+                        <Icon name="upload" size={16} style={{ marginRight: '8px' }}/>
+                        Adicionar Mídia
+                    </label>
+                    <input 
+                        type="file" 
+                        id="uploadDeMidia" 
+                        accept="image/*,video/*" 
+                        multiple 
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                    />
+                </div>
+                <div className="grupo-acoes-direita">
+                    <button className="botao-enviar" onClick={handleSubmit}>
+                       <Icon name="send" size={16} style={{ marginRight: '8px' }}/>
+                       Enviar
                     </button>
                 </div>
             </div>
-            <div className="conteudo-entrada" dangerouslySetInnerHTML={{ __html: content }}></div>
-            {media && media.length > 0 && (
-                <div className="midia-entrada">
-                    {media.map((item, index) => (
-                        item.type.startsWith('image/') ?
-                        <img key={index} src={item.url} alt={item.name} /> :
-                        <video key={index} controls src={item.url} />
-                    ))}
-                </div>
-            )}
         </div>
     );
 };
 
-export default DiaryEntry;
+export default DiaryForm;
