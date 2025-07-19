@@ -88,24 +88,8 @@ EcoSnap/
 
 ## 👥 Equipe
 
-<table>
-  <tr>
-    <td align="center">
-      <a href="#">
-        <img src="https://github.com/[usuario].png" width="100px;" alt="Lucas Santana"/><br>
-        <sub><b>Lucas Santana Camilo</b></sub><br>
-        <sub>211060666</sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="#">
-        <img src="https://github.com/[usuario].png" width="100px;" alt="Wisley Silva"/><br>
-        <sub><b>Wisley Silva</b></sub><br>
-        <sub>200029011</sub>
-      </a>
-    </td>
-  </tr>
-</table>
----
-<p align="center">
-</p>
+        Lucas Santana Camilo
+        211060666
+   
+        Wisley Silva
+        200029011
