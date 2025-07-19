@@ -62,11 +62,11 @@ EcoSnap/
 
 ## 🛠️ Tecnologias
 
-- **Frontend**: [A definir]
-- **Backend**: [A definir]
-- **Banco de Dados**: [A definir]
+- **Frontend**: REACT
+- **Backend com serviço**: SUPABASE
+- **Banco de Dados**: SUPABASE
 - **Geolocalização**: API de mapas
-- **Armazenamento**: Cloud storage para imagens
+- **Armazenamento**: TELEGRAM
 
 ## 📱 Como Usar
 
