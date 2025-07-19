@@ -84,8 +84,6 @@ EcoSnap/
 - [ ] **Fase 4**: Geolocalização
 - [ ] **Fase 5**: Banco de Dados
 
-## 📊 Status do Proje
-
 ## 👥 Equipe
 
         Lucas Santana Camilo
