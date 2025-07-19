@@ -70,7 +70,7 @@ EcoSnap/
 
 ## 📱 Como Usar
 
-1. **Instalação**: Baixe o app na loja de aplicativos
+1. **Instalação**:
 2. **Cadastro**: Crie sua conta (estudante/professor)
 3. **Participação**: Entre em uma comunidade ou crie uma turma
 4. **Registro**: Comece a documentar suas observações sobre o Cerrado
