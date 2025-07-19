@@ -4,7 +4,7 @@
 
 ## 📖 Sobre o Projeto
 
-O **EcoSnap** é uma plataforma digital educativa que transforma o Cerrado em uma sala de aula viva. O aplicativo conecta estudantes e professores em uma rede colaborativa para registrar, explorar e aprender sobre a biodiversidade do Cerrado de forma prática e tecnológica.
+O **EcoSnap** é uma plataforma digital, um aplicativo, uma rede social educativa que transforma o Cerrado em uma sala de aula viva. O aplicativo conecta estudantes e professores em uma rede colaborativa para registrar, explorar e aprender sobre a biodiversidade do Cerrado de forma prática e tecnológica.
 
 Mais do que um app, é uma ferramenta que une educação e preservação, incentivando a ciência cidadã desde a escola e formando jovens mais conscientes sobre o meio ambiente.
 
