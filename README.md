@@ -68,7 +68,7 @@ EcoSnap/
 - **Frontend**: REACT
 - **Backend com serviço**: SUPABASE
 - **Banco de Dados**: SUPABASE
-- **Geolocalização**: API de mapas
+- **Geolocalização**: Leaflet biblioteca do javascript
 - **Armazenamento**: TELEGRAM
 
 ## 📱 Como Usar
