@@ -33,4 +33,4 @@ const DiaryEntry = ({ entry, onDelete }) => {
     );
 };
 
-export default DiaryEntry;sss
+export default DiaryEntry;
