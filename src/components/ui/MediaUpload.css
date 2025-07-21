@@ -1,5 +1,19 @@
 /* src/components/ui/MediaUpload.css */
 
+:root {
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-error: #ef4444;
+  --color-gray-light: #f3f4f6;
+  --color-gray-medium: #d1d5db;
+  --color-gray-dark: #6b7280;
+  --color-text: #374151;
+  --color-white: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
 /* Container principal */
 .media-upload-container {
   width: 100%;
@@ -21,31 +35,41 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: #10b981; /* Verde */
-  color: white;
+  transition: var(--transition);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
 }
 
 .upload-btn.main-action:hover {
-  background-color: #059669;
+  background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
-.upload-btn.main-action:focus {
+.upload-btn.main-action:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 
 .upload-btn.main-action:disabled {
-  background-color: #d1d5db;
+  background-color: var(--color-gray-medium);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Grid de prévias de mídia */
 .media-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+  .media-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 8px;
+  }
 }
 
 /* Item individual de pré-visualização */
@@ -54,13 +78,14 @@
   aspect-ratio: 1 / 1;
   border-radius: 8px;
   overflow: hidden;
-  background-color: #f3f4f6;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--color-gray-light);
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
 }
 
 .media-preview-item:hover {
-  transform: scale(1.03);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
 }
 
 /* Imagem de pré-visualização */
@@ -74,10 +99,10 @@
 /* Botão para remover mídia */
 .remove-media-btn {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--color-white);
   border: none;
   border-radius: 50%;
   width: 24px;
@@ -88,15 +113,17 @@
   cursor: pointer;
   z-index: 1;
   padding: 0;
-  transition: background-color 0.2s ease;
+  transition: var(--transition);
 }
 
 .remove-media-btn:hover {
-  background: rgba(239, 68, 68, 0.8); /* Vermelho no hover */
+  background: rgba(239, 68, 68, 0.9);
+  transform: scale(1.1);
 }
 
-.remove-media-btn:focus {
-  outline: 2px solid white;
+.remove-media-btn:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 1px;
 }
 
 /* Container especial para pré-visualização de vídeo */
@@ -112,8 +139,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: white;
-  background: rgba(0, 0, 0, 0.5);
+  color: var(--color-white);
+  background: rgba(0, 0, 0, 0.6);
   padding: 8px;
   border-radius: 50%;
   pointer-events: none;
@@ -121,9 +148,9 @@
 
 /* Botão secundário para "Adicionar mais" */
 .upload-btn.add-more {
-  border: 1px dashed #d1d5db;
+  border: 1px dashed var(--color-gray-medium);
   background: none;
-  color: #6b7280;
+  color: var(--color-gray-dark);
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
@@ -132,17 +159,17 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s ease;
+  transition: var(--transition);
   align-self: flex-start;
 }
 
 .upload-btn.add-more:hover {
   background: #f9fafb;
-  border-color: #9ca3af;
-  color: #374151;
+  border-color: var(--color-gray-dark);
+  color: var(--color-text);
 }
 
-.upload-btn.add-more:focus {
+.upload-btn.add-more:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
@@ -156,17 +183,17 @@
 .upload-btn.loading {
   position: relative;
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .upload-btn.loading::after {
   content: "";
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: white;
+  border-top-color: var(--color-white);
   animation: spin 1s linear infinite;
 }
 

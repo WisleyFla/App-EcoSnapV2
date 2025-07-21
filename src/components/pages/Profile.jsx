@@ -5,12 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { 
-  saveUserProfile, 
-  loadUserProfile, 
-  saveUserSettings, 
-  loadUserSettings, 
-  updateProfileImage, 
+  loadUserProfile,
+  updateProfileImage,
   removeProfileImage,
+  loadUserSettings,
+  saveUserSettings,
   getUserStats,
   checkUsernameAvailability
 } from '../../services/profileService';
@@ -298,18 +297,21 @@ function Profile() {
         setUploadProgress(progress);
       };
 
+      // Chama a função do profileService que usa Supabase Storage
       const result = await updateProfileImage(user.id, file, onProgress);
       
-      if (result.success) {
+      if (result.success && result.url) {
         const updatedProfile = {
           ...profileData,
-          profileImageURL: result.imageURL
+          profileImageURL: result.url // Usa a URL retornada pelo Supabase
         };
         
         setProfileData(updatedProfile);
         setEditingProfile(updatedProfile);
         
         toast.success('Foto de perfil atualizada com sucesso!');
+      } else {
+        throw new Error(result.error || 'Erro ao atualizar imagem');
       }
     } catch (error) {
       console.error('Erro ao fazer upload:', error);

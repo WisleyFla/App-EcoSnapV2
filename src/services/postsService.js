@@ -1,13 +1,24 @@
+// src/services/postsService.js
 import { supabase } from '../lib/supabase';
-import { telegramService } from './telegramService';
+import { uploadPostImages, deletePostImages } from './imageService';
 import toast from 'react-hot-toast';
 
 export const postsService = {
-
-  // ... (as funções getMainFeedPosts e createPost continuam as mesmas)
   async getMainFeedPosts(limit = 20, offset = 0) {
     try {
-      const { data, error } = await supabase.from('posts').select(`*,profiles:user_id (*),likes:likes(count),comments:comments(count)`).eq('visibility', 'public').is('community_id', null).order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (*),
+          likes:likes(count),
+          comments:comments(count)
+        `)
+        .eq('visibility', 'public')
+        .is('community_id', null)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+        
       if (error) throw error;
       return data || [];
     } catch (error) {
@@ -18,81 +29,144 @@ export const postsService = {
 
   async createPost(postData) {
     const toastId = toast.loading('Criando post...');
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
-      const tagsArray = postData.tags ? postData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-      const { data: newPost, error: postError } = await supabase.from('posts').insert({ user_id: user.id, content: postData.content.trim(), tags: tagsArray, location: postData.location, media_urls: [], community_id: postData.communityId || null, }).select().single();
+      
+      const tagsArray = postData.tags 
+        ? postData.tags.split(',').map(tag => tag.trim()).filter(Boolean) 
+        : [];
+      
+      // 1. Primeiro, cria o post sem as URLs de mídia
+      const { data: newPost, error: postError } = await supabase
+        .from('posts')
+        .insert({
+          user_id: user.id,
+          content: postData.content.trim(),
+          tags: tagsArray,
+          location: postData.location,
+          media_urls: [], // Será preenchido depois do upload
+          media_metadata: [], // Metadados das mídias
+          community_id: postData.communityId || null,
+          visibility: postData.visibility || 'public'
+        })
+        .select()
+        .single();
+        
       if (postError) throw postError;
+      
       let finalMediaUrls = [];
-      if (postData.filesToUpload && postData.filesToUpload.length > 0) {
+      let mediaMetadata = [];
+      
+      // 2. Se há arquivos para upload, processa eles
+      if (postData.filesToUpload?.length > 0) {
         toast.loading('Enviando mídias...', { id: toastId });
-        const uploadPromises = postData.filesToUpload.map(file => {
-          const isVideo = file.type.startsWith('video/');
-          return telegramService.uploadMedia(file, newPost.id, postData.content.trim(), isVideo);
-        });
-        const uploadResults = await Promise.all(uploadPromises);
-        const successfulUploads = uploadResults.filter(r => r.success);
-        if (successfulUploads.length < postData.filesToUpload.length) {
-          toast.error("Algumas mídias falharam ao enviar.");
-        }
-        finalMediaUrls = successfulUploads.map(r => r.download_url);
-        if (finalMediaUrls.length > 0) {
-          const { error: updateError } = await supabase.from('posts').update({ media_urls: finalMediaUrls }).eq('id', newPost.id);
-          if (updateError) throw updateError;
-          newPost.media_urls = finalMediaUrls;
+        
+        try {
+          // Upload de todas as imagens de uma vez
+          const uploadResults = await uploadPostImages(
+            postData.filesToUpload, 
+            newPost.id,
+            (progress, index, total) => {
+              toast.loading(`Enviando mídias (${index + 1}/${total})...`, { id: toastId });
+            }
+          );
+          
+          // Filtra uploads bem-sucedidos
+          const successfulUploads = uploadResults.filter(result => result?.url);
+          
+          if (successfulUploads.length < postData.filesToUpload.length) {
+            toast.error("Algumas mídias falharam ao enviar.");
+          }
+          
+          finalMediaUrls = successfulUploads.map(result => result.url);
+          mediaMetadata = successfulUploads;
+          
+          // 3. Atualiza o post com as URLs das mídias
+          if (finalMediaUrls.length > 0) {
+            const { error: updateError } = await supabase
+              .from('posts')
+              .update({ 
+                media_urls: finalMediaUrls,
+                media_metadata: mediaMetadata
+              })
+              .eq('id', newPost.id);
+              
+            if (updateError) {
+              console.error('Erro ao atualizar URLs de mídia:', updateError);
+              // Se falhar, tenta deletar as mídias enviadas
+              if (mediaMetadata.length > 0) {
+                await deletePostImages(mediaMetadata.map(m => m.path));
+              }
+            }
+            
+            newPost.media_urls = finalMediaUrls;
+            newPost.media_metadata = mediaMetadata;
+          }
+          
+        } catch (uploadError) {
+          console.error('Erro no upload de mídias:', uploadError);
+          toast.error('Erro ao enviar mídias, mas o post foi criado.');
         }
       }
+      
       toast.dismiss(toastId);
       toast.success('Post criado com sucesso!');
-      const { data: authorProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      if (profileError) throw profileError;
-      return { ...newPost, profiles: authorProfile };
+      
+      // 4. Busca o perfil do autor para retornar dados completos
+      const { data: authorProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .catch(() => null); // Ignora erros de perfil
+      
+      return { 
+        ...newPost, 
+        profiles: authorProfile || { id: user.id, full_name: 'Usuário' }
+      };
+      
     } catch (error) {
       toast.dismiss(toastId);
-      console.error('Erro ao criar post no serviço:', error);
+      toast.error('Erro ao criar post');
+      console.error('Erro ao criar post:', error);
       throw error; 
     }
   },
 
-  // --- [FUNÇÃO ADICIONADA] ---
-  /**
-   * Adiciona ou remove uma curtida de um post.
-   * @param {string} postId - O ID do post a ser curtido/descurtido.
-   * @param {string} userId - O ID do usuário que está curtindo.
-   * @returns {Promise<{liked: boolean}>} - Retorna o novo estado da curtida.
-   */
   async toggleLike(postId, userId) {
     try {
       if (!userId) throw new Error('Usuário não autenticado');
 
-      // 1. Verifica se a curtida já existe
-      const { data: existingLike, error: selectError } = await supabase
+      // Verifica se a curtida já existe
+      const { data: existingLike, error: likeError } = await supabase
         .from('likes')
         .select('post_id')
         .eq('post_id', postId)
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (selectError) throw selectError;
+      if (likeError) throw likeError;
 
-      // 2. Se já existe, remove (descurtir)
+      // Se já existe, remove (descurtir)
       if (existingLike) {
-        const { error: deleteError } = await supabase
+        const { error } = await supabase
           .from('likes')
           .delete()
           .eq('post_id', postId)
           .eq('user_id', userId);
-        if (deleteError) throw deleteError;
+        if (error) throw error;
         return { liked: false };
-      } else {
-        // 3. Se não existe, adiciona (curtir)
-        const { error: insertError } = await supabase
-          .from('likes')
-          .insert({ post_id: postId, user_id: userId });
-        if (insertError) throw insertError;
-        return { liked: true };
       }
+      
+      // Se não existe, adiciona (curtir)
+      const { error } = await supabase
+        .from('likes')
+        .insert({ post_id: postId, user_id: userId });
+      if (error) throw error;
+      return { liked: true };
+
     } catch (error) {
       console.error('Erro ao alternar curtida:', error);
       throw error;
@@ -100,15 +174,95 @@ export const postsService = {
   },
   
   async deletePost(postId) {
+    const toastId = toast.loading('Deletando post...');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
-      const { error } = await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
+      
+      // 1. Busca o post para obter as informações de mídia
+      const { data: post } = await supabase
+        .from('posts')
+        .select('media_metadata, user_id')
+        .eq('id', postId)
+        .eq('user_id', user.id) // Garante que só o dono pode deletar
+        .single()
+        .catch(() => null);
+        
+      if (!post) throw new Error('Post não encontrado ou não autorizado');
+      
+      // 2. Remove os arquivos de mídia do storage (se existirem)
+      if (post.media_metadata?.length > 0) {
+        const filePaths = post.media_metadata
+          .filter(media => media?.path)
+          .map(media => media.path);
+          
+        if (filePaths.length > 0) {
+          await deletePostImages(filePaths).catch(error => {
+            console.error('Erro ao deletar mídias:', error);
+          });
+        }
+      }
+      
+      // 3. Remove o post do banco de dados
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user.id);
+        
       if (error) throw error;
+      
+      toast.dismiss(toastId);
+      toast.success('Post deletado com sucesso!');
       return true;
     } catch (error) {
+      toast.dismiss(toastId);
+      toast.error('Erro ao deletar post');
       console.error('Erro ao deletar post:', error);
       throw error;
     }
   },
+
+  async getCommunityPosts(communityId, limit = 20, offset = 0) {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (*),
+          likes:likes(count),
+          comments:comments(count)
+        `)
+        .eq('community_id', communityId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar posts da comunidade:', error);
+      throw error;
+    }
+  },
+
+  async getPostById(postId) {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (*),
+          likes:likes(count),
+          comments:comments(count)
+        `)
+        .eq('id', postId)
+        .single();
+        
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar post por ID:', error);
+      throw error;
+    }
+  }
 };

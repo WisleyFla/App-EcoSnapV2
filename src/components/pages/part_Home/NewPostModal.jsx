@@ -65,25 +65,19 @@ export function NewPostModal({
     
     setIsSubmitting(true);
     try {
-      // 1. Agrupa todos os dados do formulário em um único objeto
       const postData = {
         content,
         tags,
-        filesToUpload,
+        filesToUpload, // Incluir os arquivos para upload
         location: currentLocation,
-        communityId // Passa o ID da comunidade para o serviço (será null se não existir)
+        communityId
       };
 
-      // 2. Chama a função centralizada no nosso serviço, que faz todo o trabalho pesado
       const newPost = await postsService.createPost(postData);
-      
-      // 3. Informa o componente pai que o post foi criado com sucesso
       onCreatePost(newPost);
-      onClose(); // Fecha o modal
-
+      onClose();
     } catch (error) {
-      // O toast de erro já é mostrado pelo serviço, então só logamos no console aqui
-      console.error("Falha ao submeter o post a partir do modal:", error);
+      console.error("Falha ao submeter o post:", error);
     } finally {
       setIsSubmitting(false);
     }
