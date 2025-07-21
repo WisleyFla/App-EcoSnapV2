@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Heart, MessageSquare, Edit2, Trash2, MoreHorizontal, X, Check, Reply } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import CommentForm from './CommentForm';
 
+// Hook simulado para auth - substitua pela sua implementação real
 const useAuth = () => {
   return {
     user: {
@@ -14,13 +16,15 @@ const useAuth = () => {
   };
 };
 
+// Sistema de toast simulado - substitua pela sua implementação real
 const toast = {
   success: (message) => console.log('SUCCESS:', message),
   error: (message) => console.log('ERROR:', message)
 };
 
 const CommentItem = ({ 
-  comment, 
+  comment,
+  postId,
   onDelete, 
   onUpdate,
   onEdit,
@@ -34,7 +38,7 @@ const CommentItem = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLiked, setIsLiked] = useState(comment.user_has_liked);
+  const [isLiked, setIsLiked] = useState(comment.user_has_liked || false);
   const [likeCount, setLikeCount] = useState(comment.likes_count || 0);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -44,15 +48,21 @@ const CommentItem = ({
   const [repliesCount, setRepliesCount] = useState(comment.replies_count || 0);
 
   const isOwner = currentUserId === comment.user_id;
-  const canReply = !!currentUserId;
+  const canReply = !!currentUserId && level < 100; // Limita aninhamento a 3 níveis
   const updateHandler = onEdit || onUpdate;
 
+  console.log('Created:', comment.created_at, 'Updated:', comment.updated_at);
+  
+
+  // Sincroniza estado local com props do comentário
   useEffect(() => {
     setEditText(comment.content);
-    setIsLiked(comment.user_has_liked);
-    setLikeCount(comment.likes_count);
+    setIsLiked(comment.user_has_liked || false);
+    setLikeCount(comment.likes_count || 0);
+    setRepliesCount(comment.replies_count || 0);
   }, [comment]);
 
+  // Fecha menu quando clica fora
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showMenu && !event.target.closest('.comment-menu')) {
@@ -66,6 +76,7 @@ const CommentItem = ({
     };
   }, [showMenu]);
 
+  // Formatar tempo relativo
   const formatTimeAgo = (dateString) => {
     try {
       return formatDistanceToNow(new Date(dateString), { 
@@ -78,17 +89,14 @@ const CommentItem = ({
     }
   };
 
+  // Manipular atualização de comentário
   const handleUpdate = async () => {
     const trimmedText = editText.trim();
     
-    // Validações simples
     if (trimmedText === '' || trimmedText === comment.content) {
       setIsEditing(false);
       return;
     }
-
-    // Pega o handler correto (onEdit ou onUpdate)
-    const updateHandler = onEdit || onUpdate;
 
     if (!updateHandler) {
       toast.error('Função de atualização não definida');
@@ -97,19 +105,18 @@ const CommentItem = ({
 
     setIsSaving(true);
     try {
-      // Apenas CHAMA a função do pai, passando o ID e o NOVO TEXTO
       await updateHandler(comment.id, trimmedText);
-      setIsEditing(false); // Só fecha a edição se a atualização der certo
-
+      setIsEditing(false);
+      toast.success('Comentário atualizado!');
     } catch (error) {
-      // Se a função do pai der erro, ele será capturado aqui
-      // e o formulário de edição permanecerá aberto para o usuário tentar novamente.
       console.error('Falha ao salvar a edição:', error);
+      toast.error('Erro ao atualizar comentário');
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Manipular curtida
   const handleLikeClick = async () => {
     if (!onToggleLike) {
       toast.error('Função de curtida não definida');
@@ -121,29 +128,27 @@ const CommentItem = ({
       return;
     }
 
-    // Lógica otimista para a UI responder rápido
     const newLikedState = !isLiked;
+    const originalLikeCount = likeCount;
+    
+    // Atualização otimista
     setIsLiked(newLikedState);
     setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
     
     try {
-      // CORREÇÃO: Passa apenas o ID do comentário.
       await onToggleLike(comment.id);
     } catch (error) {
-      // Reverte a mudança na UI se der erro
       console.error('Erro ao processar curtida:', error);
+      // Reverte se der erro
       setIsLiked(!newLikedState);
-      setLikeCount(prev => newLikedState ? prev - 1 : prev - 1);
+      setLikeCount(originalLikeCount);
       toast.error("Erro ao processar curtida.");
     }
   };
 
+  // Manipular exclusão
   const handleDelete = async () => {
     setShowMenu(false);
-    
-    if (!window.confirm("Tem certeza que deseja apagar este comentário?")) {
-      return;
-    }
     
     if (!onDelete) {
       toast.error('Função de exclusão não definida');
@@ -162,73 +167,91 @@ const CommentItem = ({
     }
   };
 
+  // Carregar respostas
   const loadReplies = async () => {
-    if (replies.length > 0) {
-      setShowReplies(!showReplies);
+    if (showReplies) {
+      setShowReplies(false);
+      return;
+    }
+
+    if (repliesCount === 0) {
       return;
     }
 
     setLoadingReplies(true);
     try {
-      const mockReplies = [
-        {
-          id: Date.now() + 1,
-          content: "Esta é uma resposta de exemplo ao comentário",
-          post_id: comment.post_id,
-          parent_id: comment.id,
-          user_id: 'other-user-id',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          likes_count: 0,
-          replies_count: 0,
-          user_has_liked: false,
-          profiles: {
-            id: 'other-user-id',
-            username: 'outro_usuario',
-            full_name: 'Outro Usuário',
-            avatar_url: null
-          }
-        },
-        {
-          id: Date.now() + 2,
-          content: "Outra resposta de exemplo para demonstrar múltiplas respostas",
-          post_id: comment.post_id,
-          parent_id: comment.id,
-          user_id: 'third-user-id',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          likes_count: 2,
-          replies_count: 0,
-          user_has_liked: false,
-          profiles: {
-            id: 'third-user-id',
-            username: 'terceiro_usuario',
-            full_name: 'Terceiro Usuário',
-            avatar_url: null
-          }
-        }
-      ];
+      const { data: repliesData, error } = await supabase
+        .from('comments_with_profiles')
+        .select('*')
+        .eq('parent_id', comment.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
       
-      setReplies(mockReplies);
+      setReplies(repliesData || []);
       setShowReplies(true);
     } catch (error) {
       console.error('Erro ao carregar respostas:', error);
       toast.error('Erro ao carregar respostas.');
+      setReplies([]);
     } finally {
       setLoadingReplies(false);
     }
   };
 
-  const handleReplySubmit = (newReply) => {
-    setReplies(prev => [...prev, newReply]);
-    setShowReplyForm(false);
-    setShowReplies(true);
-    setRepliesCount(prev => prev + 1);
-    if (onReply) {
-      onReply();
+  // Manipular envio de resposta
+  const handleReplySubmit = async (newReply) => {
+    if (!currentUserId) {
+      toast.error('Você precisa estar logado para responder');
+      return;
+    }
+
+    try {
+      // Insere no banco
+      const { data: savedReply, error: insertError } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          parent_id: comment.id,
+          user_id: currentUserId,
+          content: newReply.content
+        })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Busca o comentário completo com perfil
+      const { data: replyWithProfile, error: fetchError } = await supabase
+        .from('comments_with_profiles')
+        .select('*')
+        .eq('id', savedReply.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      
+      // Atualiza estado local
+      setReplies(prev => [...prev, replyWithProfile]);
+      setRepliesCount(prev => prev + 1);
+      setShowReplyForm(false);
+      
+      // Se não estava mostrando respostas, mostra agora
+      if (!showReplies) {
+        setShowReplies(true);
+      }
+      
+      if (onReply) {
+        onReply();
+      }
+      
+      toast.success('Resposta enviada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar resposta:', error);
+      toast.error('Erro ao enviar resposta');
     }
   };
 
+  // Manipular remoção de resposta
   const handleReplyRemoved = () => {
     setRepliesCount(prev => Math.max(0, prev - 1));
     if (onCommentRemoved) {
@@ -236,19 +259,24 @@ const CommentItem = ({
     }
   };
 
-  const handleReplyUpdated = (replyId, updatedReply) => {
+  // Manipular atualização de resposta
+  const handleReplyUpdated = (replyId, updatedContent) => {
     setReplies(prev => 
       prev.map(reply => 
-        reply.id === replyId ? updatedReply : reply
+        reply.id === replyId 
+          ? { ...reply, content: updatedContent, updated_at: new Date().toISOString() }
+          : reply
       )
     );
   };
 
+  // Manipular exclusão de resposta
   const handleReplyDeleted = (replyId) => {
     setReplies(prev => prev.filter(reply => reply.id !== replyId));
     handleReplyRemoved();
   };
 
+  // Gerar iniciais do avatar
   const getAvatarInitials = () => {
     if (comment.profiles?.full_name) {
       return comment.profiles.full_name.charAt(0).toUpperCase();
@@ -262,15 +290,18 @@ const CommentItem = ({
     return 'U';
   };
 
+  // Cancelar edição
   const handleEditCancel = () => {
     setIsEditing(false);
     setEditText(comment.content);
   };
 
+  // Manipular mudança no texto de edição
   const handleEditTextChange = (e) => {
     setEditText(e.target.value);
   };
 
+  // Manipular teclas na edição
   const handleEditKeyDown = (e) => {
     if (e.key === 'Escape') {
       handleEditCancel();
@@ -281,12 +312,15 @@ const CommentItem = ({
     }
   };
 
+  // Calcular caracteres restantes
   const remainingChars = 1000 - editText.length;
+  const isNearLimit = remainingChars < 100;
   const isOverLimit = remainingChars < 0;
 
   return (
     <div className={`comment-item level-${level}`}>
       <div className="comment-content">
+        {/* Avatar */}
         <div className="comment-avatar">
           {comment.profiles?.avatar_url ? (
             <img 
@@ -301,18 +335,21 @@ const CommentItem = ({
           )}
         </div>
 
+        {/* Corpo do comentário */}
         <div className="comment-body">
+          {/* Cabeçalho */}
           <div className="comment-header">
             <h4 className="comment-author">
               {comment.profiles?.full_name || comment.profiles?.username || 'Usuário'}
             </h4>
             <span className="comment-time">
               {formatTimeAgo(comment.created_at)}
-              {comment.updated_at !== comment.created_at && (
+              {comment.updated_at && comment.updated_at > comment.created_at && (
                 <span className="edited-indicator"> (editado)</span>
               )}
             </span>
 
+            {/* Menu de opções para o proprietário */}
             {isOwner && !isEditing && (
               <div className="comment-menu">
                 <button
@@ -346,6 +383,7 @@ const CommentItem = ({
             )}
           </div>
 
+          {/* Conteúdo do comentário */}
           <div className="comment-text">
             {isEditing ? (
               <div className="edit-form">
@@ -353,7 +391,7 @@ const CommentItem = ({
                   value={editText}
                   onChange={handleEditTextChange}
                   onKeyDown={handleEditKeyDown}
-                  className="edit-textarea"
+                  className={`edit-textarea ${isOverLimit ? 'error' : ''}`}
                   rows={3}
                   autoFocus
                   disabled={isSaving}
@@ -361,7 +399,7 @@ const CommentItem = ({
                 />
                 
                 {editText.length > 0 && (
-                  <div className={`char-counter ${remainingChars < 100 ? 'warning' : ''} ${isOverLimit ? 'error' : ''}`}>
+                  <div className={`char-counter ${isNearLimit ? 'warning' : ''} ${isOverLimit ? 'error' : ''}`}>
                     {remainingChars} caracteres restantes
                   </div>
                 )}
@@ -399,30 +437,37 @@ const CommentItem = ({
             )}
           </div>
 
+          {/* Rodapé com ações */}
           <div className="comment-footer">
+            {/* Botão de curtir */}
             <button
               onClick={handleLikeClick}
               className={`footer-action-btn ${isLiked ? 'liked' : ''}`}
               disabled={!currentUserId}
+              title={currentUserId ? 'Curtir comentário' : 'Faça login para curtir'}
             >
               <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
               <span>{Number(likeCount) || 0}</span>
             </button>
 
+            {/* Botão de responder */}
             {canReply && (
               <button
                 className="footer-action-btn"
                 onClick={() => setShowReplyForm(!showReplyForm)}
+                title="Responder comentário"
               >
                 <Reply size={16} /> Responder
               </button>
             )}
 
+            {/* Botão para ver/ocultar respostas */}
             {repliesCount > 0 && (
               <button
                 className="footer-action-btn"
                 onClick={loadReplies}
                 disabled={loadingReplies}
+                title={showReplies ? 'Ocultar respostas' : 'Ver respostas'}
               >
                 <MessageSquare size={16} />
                 {loadingReplies ? (
@@ -436,10 +481,11 @@ const CommentItem = ({
             )}
           </div>
 
+          {/* Formulário de resposta */}
           {showReplyForm && (
             <div className="reply-form-container">
               <CommentForm
-                postId={comment.post_id}
+                postId={postId}
                 parentId={comment.id}
                 onCommentSubmit={handleReplySubmit}
                 onCancel={() => setShowReplyForm(false)}
@@ -452,12 +498,14 @@ const CommentItem = ({
         </div>
       </div>
 
-      {showReplies && replies.length > 0 && (
+      {/* Lista de respostas */}
+      {showReplies && Array.isArray(replies) && replies.length > 0 && (
         <div className="comment-replies">
           {replies.map((reply) => (
             <CommentItem
-              key={reply.id}
+              key={`reply-${reply.id}-${level}`}
               comment={reply}
+              postId={postId}
               onDelete={handleReplyDeleted}
               onUpdate={handleReplyUpdated}
               onEdit={handleReplyUpdated}

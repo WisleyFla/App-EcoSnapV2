@@ -5,14 +5,47 @@ import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
 import './CommentSection.css';
 
+// Sistema de toast simulado - substitua pela sua implementação real
+const toast = {
+  success: (message) => console.log('SUCCESS:', message),
+  error: (message) => console.log('ERROR:', message)
+};
+
 const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
-  // Função para obter o usuário atual
+  // Primeiro useEffect - para carregar contagem inicial
+  useEffect(() => {
+    const loadInitialCount = async () => {
+      if (postId) {
+        try {
+          const { count, error } = await supabase
+            .from('comments')
+            .select('*', { count: 'exact' })
+            .eq('post_id', postId)
+            .is('parent_id', null);
+          
+          if (error) {
+            console.error('Erro ao carregar contagem:', error);
+            return;
+          }
+          
+          setCommentCount(count || 0);
+        } catch (err) {
+          console.error('Erro ao carregar contagem inicial:', err);
+        }
+      }
+    };
+
+    loadInitialCount();
+  }, [postId]);
+
+  // Segundo useEffect - para carregar o usuário atual
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -26,10 +59,11 @@ const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
         console.error('Erro ao carregar usuário:', err);
       }
     };
+    
     getCurrentUser();
   }, []);
 
-  // Carrega comentários quando postId muda
+  // Terceiro useEffect - carrega comentários quando postId muda
   useEffect(() => {
     if (postId) {
       loadComments();
@@ -38,6 +72,8 @@ const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
 
   // Função para carregar comentários do banco
   const loadComments = async () => {
+    if (!postId) return;
+    
     setLoading(true);
     setError('');
     try {
@@ -61,8 +97,13 @@ const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
     }
   };
 
-  // Função para adicionar novo comentário
+  // Função para editar comentário
   const handleCommentEdit = async (commentId, newContent) => {
+    if (!currentUser) {
+      setError('Usuário não autenticado');
+      throw new Error('Usuário não autenticado');
+    }
+
     try {
       // 1. Prepara os dados para atualização
       const updateData = {
@@ -104,34 +145,42 @@ const CommentSection = ({ postId, onCommentAdded, onCommentRemoved }) => {
     }
   };
 
-  // Cole esta função completa dentro do seu componente CommentSection
-
-const handleNewComment = async (commentDataFromForm) => {
-  if (!currentUser) {
-    setError('Você precisa estar logado para comentar.');
-    return;
-  }
-
-  try {
-    // 1. Insere o novo comentário no banco, pegando o texto do formulário
-    //    e usando o ID do post e do usuário que já temos.
-    const { data: savedComment, error: insertError } = await supabase
-      .from('comments')
-      .insert({
-        post_id: postId,
-        parent_id: null, // Como este é um comentário principal, o parent_id é nulo
-        user_id: currentUser.id,
-        content: commentDataFromForm.content 
-      })
-      .select('id') // Pega de volta apenas o ID do comentário recém-criado
-      .single();
-
-    if (insertError) {
-      throw insertError;
+  // Função para adicionar novo comentário
+  const handleNewComment = async (commentDataFromForm) => {
+    if (!currentUser) {
+      setError('Você precisa estar logado para comentar.');
+      toast.error('Você precisa estar logado para comentar.');
+      return;
     }
 
-    // 2. Com o ID, busca o comentário completo usando a nossa VIEW para ter os dados do perfil
-    const { data: newCommentWithProfile, error: fetchError } = await supabase
+    if (!postId) {
+      setError('ID do post não encontrado.');
+      toast.error('ID do post não encontrado.');
+      return;
+    }
+
+    setSubmittingComment(true);
+    setError('');
+
+    try {
+      // 1. Insere o novo comentário no banco
+      const { data: savedComment, error: insertError } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          parent_id: null, // Como este é um comentário principal, o parent_id é nulo
+          user_id: currentUser.id,
+          content: commentDataFromForm.content.trim()
+        })
+        .select('id') // Pega de volta apenas o ID do comentário recém-criado
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // 2. Com o ID, busca o comentário completo usando a nossa VIEW para ter os dados do perfil
+      const { data: newCommentWithProfile, error: fetchError } = await supabase
         .from('comments_with_profiles')
         .select('*')
         .eq('id', savedComment.id)
@@ -143,15 +192,22 @@ const handleNewComment = async (commentDataFromForm) => {
       
       // 3. Adiciona o comentário completo à lista na tela
       setComments(prevComments => [...prevComments, newCommentWithProfile]);
+      setCommentCount(prev => prev + 1);
 
       // 4. Avisa o componente pai (PostCard) que a contagem de comentários mudou
       if (onCommentAdded) {
         onCommentAdded();
       }
 
+      toast.success('Comentário adicionado com sucesso!');
+
     } catch (err) {
       console.error('Erro ao adicionar comentário:', err);
-      setError(err.message || 'Erro ao adicionar comentário');
+      const errorMessage = err.message || 'Erro ao adicionar comentário';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -159,6 +215,7 @@ const handleNewComment = async (commentDataFromForm) => {
   const handleCommentDelete = async (commentId) => {
     if (!currentUser) {
       setError('Usuário não autenticado');
+      toast.error('Usuário não autenticado');
       return;
     }
 
@@ -168,7 +225,7 @@ const handleNewComment = async (commentDataFromForm) => {
         .from('comments')
         .delete()
         .eq('id', commentId)
-        .eq('user_id', currentUserId); // Só permite deletar próprios comentários
+        .eq('user_id', currentUser.id); // Só permite deletar próprios comentários
 
       if (deleteError) {
         throw deleteError;
@@ -180,60 +237,98 @@ const handleNewComment = async (commentDataFromForm) => {
       );
 
       // Notifica componente pai sobre remoção
+      setCommentCount(prev => Math.max(0, prev - 1));
       if (onCommentRemoved) {
         onCommentRemoved();
       }
 
       console.log('Comentário removido com sucesso:', commentId);
+      toast.success('Comentário removido com sucesso!');
     } catch (err) {
       console.error('Erro ao deletar comentário:', err);
-      setError(err.message || 'Erro ao deletar comentário');
+      const errorMessage = err.message || 'Erro ao deletar comentário';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     }
   };
 
-
   // Função para toggle like em comentário
-  const handleToggleLike = async (commentId) => { // CORREÇÃO: Não recebe mais 'userId'
+  const handleToggleLike = async (commentId) => {
     if (!currentUser) {
       setError('Usuário não autenticado');
+      toast.error('Faça login para curtir comentários');
       throw new Error('Usuário não autenticado');
     }
 
     try {
-      // Verifica se o usuário já curtiu o comentário
+      // Verifica se já existe like
       const { data: existingLike, error: checkError } = await supabase
         .from('comment_likes')
-        .select('id')
+        .select()
         .eq('comment_id', commentId)
-        .eq('user_id', currentUser.id) // CORREÇÃO: Usa o 'currentUser.id' do estado
-        .single();
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
 
-      // ... resto da função permanece igual ...
+      if (checkError) throw checkError;
+
+      // Lógica otimista - atualiza a UI primeiro
+      const isLiking = !existingLike;
+      setComments(prevComments =>
+        prevComments.map(comment =>
+          comment.id === commentId
+            ? {
+                ...comment,
+                likes_count: isLiking 
+                  ? comment.likes_count + 1 
+                  : comment.likes_count - 1,
+                user_has_liked: isLiking
+              }
+            : comment
+        )
+      );
 
       if (existingLike) {
-        // Remove like
+        // Remove like existente
         const { error: deleteError } = await supabase
           .from('comment_likes')
           .delete()
           .eq('comment_id', commentId)
-          .eq('user_id', currentUser.id); // CORREÇÃO: Usa o 'currentUser.id' do estado
-        // ...
+          .eq('user_id', currentUser.id);
+
+        if (deleteError) throw deleteError;
       } else {
-        // Adiciona like
+        // Adiciona novo like
         const { error: insertError } = await supabase
           .from('comment_likes')
-          .insert([{
+          .insert({
             comment_id: commentId,
-            user_id: currentUser.id, // CORREÇÃO: Usa o 'currentUser.id' do estado
+            user_id: currentUser.id,
             created_at: new Date().toISOString()
-          }]);
-        // ...
+          });
+
+        if (insertError) throw insertError;
       }
+    } catch (error) {
+      console.error('Erro ao processar curtida:', error);
       
-    } catch (err) {
-      console.error('Erro ao processar like:', err);
-      setError(err.message || 'Erro ao processar like');
-      throw err; 
+      // Reverter em caso de erro
+      setComments(prevComments =>
+        prevComments.map(comment =>
+          comment.id === commentId
+            ? {
+                ...comment,
+                likes_count: comment.user_has_liked 
+                  ? comment.likes_count + 1 
+                  : comment.likes_count - 1,
+                user_has_liked: !comment.user_has_liked
+              }
+            : comment
+        )
+      );
+      
+      toast.error('Erro ao processar curtida');
+      throw error;
     }
   };
 
@@ -245,13 +340,21 @@ const handleNewComment = async (commentDataFromForm) => {
   };
 
   // Função para refrescar comentários
-  const refreshComments = () => {
-    loadComments();
+  const refreshComments = async () => {
+    await loadComments();
+    toast.success('Comentários atualizados!');
   };
 
   // Função para limpar erro
   const clearError = () => {
     setError('');
+  };
+
+  // Função para lidar com remoção de comentários (incluindo respostas)
+  const handleCommentRemoved = () => {
+    if (onCommentRemoved) {
+      onCommentRemoved();
+    }
   };
 
   return (
@@ -262,6 +365,7 @@ const handleNewComment = async (commentDataFromForm) => {
           <CommentForm
             postId={postId}
             onSubmit={handleNewComment}
+            onCommentSubmit={handleNewComment}
             placeholder="Adicione um comentário..."
             disabled={submittingComment}
           />
@@ -300,14 +404,16 @@ const handleNewComment = async (commentDataFromForm) => {
           <div className="comments-container">
             {comments.map((comment) => (
               <CommentItem
-                key={comment.id}
+                key={`comment-${comment.id}`}
                 comment={comment}
+                postId={postId}
                 onReply={handleReply}
                 onDelete={handleCommentDelete}
+                onUpdate={handleCommentEdit}
                 onEdit={handleCommentEdit}
                 onToggleLike={handleToggleLike}
                 currentUserId={currentUser?.id}
-                onCommentRemoved={onCommentRemoved}
+                onCommentRemoved={handleCommentRemoved}
                 level={0}
               />
             ))}
@@ -321,7 +427,7 @@ const handleNewComment = async (commentDataFromForm) => {
           <button
             onClick={refreshComments}
             className="refresh-comments-btn"
-            disabled={submittingComment}
+            disabled={submittingComment || loading}
           >
             Atualizar comentários
           </button>

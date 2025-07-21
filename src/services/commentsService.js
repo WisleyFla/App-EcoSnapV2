@@ -3,8 +3,6 @@ import { supabase } from '../lib/supabase';
 export const commentsService = {
   /**
    * Busca os comentários de um post com informações completas
-   * @param {string} postId - ID do post
-   * @returns {Promise<Array>} Lista de comentários formatados
    */
   async getCommentsForPost(postId) {
     try {
@@ -17,6 +15,7 @@ export const commentsService = {
           updated_at,
           post_id,
           user_id,
+          parent_id,
           profiles:user_id (id, full_name, username, avatar_url),
           comment_likes (user_id)
         `)
@@ -42,12 +41,9 @@ export const commentsService = {
   },
 
   /**
-   * Adiciona um novo comentário
-   * @param {string} postId - ID do post
-   * @param {string} content - Conteúdo do comentário
-   * @returns {Promise<Object>} Comentário criado
+   * Adiciona um novo comentário (ou resposta)
    */
-  async addComment(postId, content) {
+  async addComment(postId, content, parentId = null) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -55,9 +51,10 @@ export const commentsService = {
       const { data, error } = await supabase
         .from('comments')
         .insert({ 
-          post_id: postId, 
-          user_id: user.id, 
-          content 
+          post_id: postId,
+          parent_id: parentId,
+          user_id: user.id,
+          content
         })
         .select(`
           id,
@@ -65,6 +62,7 @@ export const commentsService = {
           created_at,
           post_id,
           user_id,
+          parent_id,
           profiles:user_id (id, full_name, username, avatar_url)
         `)
         .single();
@@ -73,8 +71,9 @@ export const commentsService = {
       
       return { 
         ...data, 
-        likes_count: 0, 
-        user_has_liked: false 
+        likes_count: 0,
+        replies_count: 0,
+        user_has_liked: false
       };
     } catch (error) {
       console.error("Erro ao adicionar comentário:", error);
@@ -84,8 +83,6 @@ export const commentsService = {
 
   /**
    * Remove um comentário
-   * @param {string} commentId - ID do comentário
-   * @returns {Promise<boolean>} True se bem sucedido
    */
   async deleteComment(commentId) {
     try {
@@ -103,10 +100,7 @@ export const commentsService = {
   },
 
   /**
-   * Atualiza o conteúdo de um comentário
-   * @param {string} commentId - ID do comentário
-   * @param {string} newContent - Novo conteúdo
-   * @returns {Promise<Object>} Comentário atualizado
+   * Atualiza um comentário
    */
   async updateComment(commentId, newContent) {
     try {
@@ -124,6 +118,7 @@ export const commentsService = {
           updated_at,
           post_id,
           user_id,
+          parent_id,
           profiles:user_id (id, full_name, username, avatar_url)
         `)
         .single();
@@ -138,54 +133,48 @@ export const commentsService = {
 
   /**
    * Alterna curtida em um comentário
-   * @param {string} commentId - ID do comentário
-   * @param {string} userId - ID do usuário
-   * @returns {Promise<Object>} { liked: boolean }
    */
   async toggleCommentLike(commentId, userId) {
     try {
-      // Verifica se já existe curtida
-      const { data: existingLike, error: selectError } = await supabase
+      // Verifica se o usuário já curtiu
+      const { data: existingLike, error: checkError } = await supabase
         .from('comment_likes')
         .select()
         .eq('comment_id', commentId)
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (selectError) throw selectError;
+      if (checkError) throw checkError;
 
       if (existingLike) {
-        // Remove curtida existente
+        // Remove o like
         const { error: deleteError } = await supabase
           .from('comment_likes')
           .delete()
           .eq('comment_id', commentId)
           .eq('user_id', userId);
-
         if (deleteError) throw deleteError;
         return { liked: false };
       } else {
-        // Adiciona nova curtida
+        // Adiciona o like
         const { error: insertError } = await supabase
           .from('comment_likes')
-          .insert({ 
-            comment_id: commentId, 
-            user_id: userId 
+          .insert({
+            comment_id: commentId,
+            user_id: userId,
+            created_at: new Date().toISOString()
           });
-
         if (insertError) throw insertError;
         return { liked: true };
       }
     } catch (error) {
-      console.error("Erro ao alternar curtida:", error);
+      console.error("Erro ao curtir:", error);
       throw error;
     }
   },
 
   /**
-   * Busca a contagem de comentários para vários posts
-   * @param {Array<string>} postIds - IDs dos posts
-   * @returns {Promise<Object>} Mapa de contagens { postId: count }
+   * Busca contagem de comentários para vários posts
    */
   async getCommentsCountForPosts(postIds) {
     try {
@@ -203,6 +192,25 @@ export const commentsService = {
       }, {});
     } catch (error) {
       console.error("Erro ao buscar contagem de comentários:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Busca respostas para um comentário
+   */
+  async getRepliesForComment(commentId) {
+    try {
+      const { data, error } = await supabase
+        .from('comments_with_profiles')
+        .select('*')
+        .eq('parent_id', commentId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao buscar respostas:", error);
       throw error;
     }
   }
