@@ -11,7 +11,8 @@ import {
   loadUserSettings,
   saveUserSettings,
   getUserStats,
-  checkUsernameAvailability
+  checkUsernameAvailability,
+  saveUserProfile
 } from '../../services/profileService';
 
 import '../../styles/pages/Profile.css';
