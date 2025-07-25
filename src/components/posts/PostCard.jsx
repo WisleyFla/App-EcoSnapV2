@@ -8,9 +8,11 @@ import { useAuth } from '../../context/AuthContext';
 import { postsService } from '../../services/postsService';
 import { toast } from 'react-hot-toast';
 import DeletePostModal from './DeletePostModal';
+import { Edit } from 'lucide-react';
+import EditPostModal from './EditPostModal';
 import './PostCard.css';
 
-const PostCard = ({ post, onDelete }) => {
+const PostCard = ({ post, onDelete, onPostUpdated }) => {
     const { isDarkMode } = useTheme();
     const { user: currentUser } = useAuth();
     
@@ -22,7 +24,7 @@ const PostCard = ({ post, onDelete }) => {
     const [likeCount, setLikeCount] = useState(post.likes_count || 0);
     const [commentCount, setCommentCount] = useState(post.comments_count || 0);
     const [showShareOptions, setShowShareOptions] = useState(false);
-
+    const [showEditModal, setShowEditModal] = useState(false);
     const isOwner = currentUser && post.user_id === currentUser.id;
 
     const handleToggleLike = async () => {
@@ -234,6 +236,20 @@ const PostCard = ({ post, onDelete }) => {
                                 </button>
                                 {showMenu && (
                                     <div className="menu-dropdown" onClick={(e) => e.stopPropagation()}>
+                                        <div 
+                                            onClick={() => {
+                                                setShowMenu(false);
+                                                setShowEditModal(true);
+                                            }} 
+                                            className="menu-item"
+                                            role="button" 
+                                            tabIndex="0"
+                                            >
+                                            <span className="menu-item-content">
+                                                <Edit size={16} />
+                                                Editar
+                                            </span>
+                                        </div>
                                         <div onClick={handleDeleteClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleDeleteClick(); } }} className="menu-item delete-item" role="button" tabIndex="0">
                                             <span className="menu-item-content">
                                                 <Trash2 size={16} />
@@ -290,6 +306,18 @@ const PostCard = ({ post, onDelete }) => {
                 onCancel={handleDeleteCancel} 
                 isDeleting={isDeleting} 
                 postContent={post.content}
+            />
+
+            <EditPostModal
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                onPostUpdated={(updatedPost) => {
+                    // Implemente esta função no componente pai para atualizar a lista de posts
+                    // onPostUpdated(updatedPost);
+                    toast.success('Post atualizado com sucesso!');
+                    setShowEditModal(false);
+                }}
+                post={post}
             />
 
             {showShareOptions && (

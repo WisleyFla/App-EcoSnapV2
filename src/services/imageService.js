@@ -10,7 +10,7 @@ const AVATAR_CONFIG = {
 
 // Configurações para imagens de posts
 const POST_IMAGES_CONFIG = {
-  BUCKET: 'post-images',
+  BUCKET: 'ecosnap-media',
   MAX_SIZE: 5 * 1024 * 1024, // 5MB
   DIMENSIONS: { width: 1200, height: 800, quality: 0.85 }
 };
@@ -65,15 +65,15 @@ export const uploadPostImages = async (files, postId, onProgress = null) => {
 
         // Nome do arquivo organizado por post
         const fileExt = file.name.split('.').pop();
-        const fileName = `post_${postId}_${Date.now()}_${index}.${fileExt}`;
-        const filePath = `${postId}/${fileName}`;
+        const fileName = `post_${postId}_${index}.${fileExt}`;
+        const filePath = `post/${postId}/${fileName}`;
 
         // Upload
         const { error: uploadError } = await supabase.storage
           .from(POST_IMAGES_CONFIG.BUCKET)
           .upload(filePath, resizedFile, {
             cacheControl: '3600',
-            upsert: false,
+            upsert: true,
             contentType: file.type
           });
 

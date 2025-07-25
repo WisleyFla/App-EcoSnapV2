@@ -1,12 +1,60 @@
 /* src/components/posts/PostForm.css */
 
 .post-form {
+  --form-bg: #ffffff;
+  --form-border-color: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --input-focus-border: #4caf50;
+  --input-focus-shadow: rgba(76, 175, 80, 0.1);
+  --btn-primary-bg: #4caf50;
+  --btn-primary-hover: #45a049;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #e0e0e0;
+  --btn-secondary-text: #666;
+  --btn-secondary-hover-border: #ccc;
+  --btn-secondary-hover-text: #333;
+  --location-btn-map: #10b981;
+  --location-btn-map-hover: #059669;
+  --location-btn-gps: #3b82f6;
+  --location-btn-gps-hover: #2563eb;
+}
+
+[data-theme="dark"] .post-form {
+  --form-bg: var(--post-bg, #1a1a1a);
+  --form-border-color: var(--post-border, #374151);
+  --text-primary: var(--post-text-color, #f9fafb);
+  --text-secondary: var(--secondary-text-color, #d1d5db);
+  --text-tertiary: var(--secondary-text-color, #9ca3af);
+  --input-bg: var(--input-bg, #374151);
+  --input-border: var(--post-border, #4b5563);
+  --input-focus-border: #10b981;
+  --input-focus-shadow: rgba(16, 185, 129, 0.1);
+  --btn-primary-bg: var(--follow-btn-bg, #10b981);
+  --btn-primary-hover: #059669;
+  --btn-secondary-bg: #4b5563;
+  --btn-secondary-border: #4b5563;
+  --btn-secondary-text: #f9fafb;
+  --btn-secondary-hover-border: #6b7280;
+  --btn-secondary-hover-text: #ffffff;
+  --location-btn-map: #10b981;
+  --location-btn-map-hover: #059669;
+  --location-btn-gps: #3b82f6;
+  --location-btn-gps-hover: #2563eb;
+}
+
+.post-form {
   max-width: 600px;
   margin: 0 auto;
   padding: 24px;
-  background: white;
+  background: var(--form-bg);
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+  border: 1px solid var(--form-border-color);
 }
 
 .form-group {
@@ -15,53 +63,46 @@
 
 .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
-.content-textarea {
+.content-textarea,
+.form-input,
+.form-select {
   width: 100%;
-  padding: 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  font-size: 16px;
+  padding: 12px 16px;
+  border: 2px solid var(--input-border);
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  resize: vertical;
-  min-height: 120px;
-  transition: border-color 0.2s ease;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
-.content-textarea:focus {
+.content-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-size: 16px;
+}
+
+.content-textarea:focus,
+.form-input:focus,
+.form-select:focus {
   outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-shadow);
 }
 
 .character-count {
   text-align: right;
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
   margin-top: 4px;
-}
-
-.form-input,
-.form-select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-  background: white;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
 .form-select {
@@ -75,11 +116,118 @@
   cursor: pointer;
   font-weight: normal !important;
   margin-bottom: 0 !important;
+  color: var(--text-secondary);
 }
 
 .checkbox-label input[type="checkbox"] {
   width: auto;
   margin: 0;
+  accent-color: var(--btn-primary-bg);
+}
+
+/* Estilos de localização - copiados do NewPostModal */
+.location-buttons-container {
+  display: flex;
+  gap: 12px;
+}
+
+.location-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.location-btn.map {
+  background-color: var(--location-btn-map);
+  color: white;
+}
+
+.location-btn.map:hover {
+  background-color: var(--location-btn-map-hover);
+}
+
+.location-btn.gps {
+  background-color: var(--location-btn-gps);
+  color: white;
+}
+
+.location-btn.gps:hover:not(:disabled) {
+  background-color: var(--location-btn-gps-hover);
+}
+
+.location-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.location-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--input-bg);
+  border: 2px solid var(--input-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.location-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.location-change-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.location-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.location-action-btn.change {
+  color: var(--location-btn-gps);
+}
+
+.location-action-btn.change:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.location-action-btn.remove {
+  color: #ef4444;
+}
+
+.location-action-btn.remove:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .form-actions {
@@ -88,41 +236,41 @@
   justify-content: flex-end;
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--form-border-color);
 }
 
-.cancel-button {
+.cancel-button,
+.submit-button {
   padding: 12px 24px;
-  border: 2px solid #e0e0e0;
-  background: white;
-  color: #666;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 120px;
+  border: 2px solid;
+}
+
+.cancel-button {
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+  color: var(--btn-secondary-text);
 }
 
 .cancel-button:hover:not(:disabled) {
-  border-color: #ccc;
-  color: #333;
+  border-color: var(--btn-secondary-hover-border);
+  color: var(--btn-secondary-hover-text);
 }
 
 .submit-button {
-  padding: 12px 24px;
-  background: #4caf50;
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  min-width: 120px;
 }
 
 .submit-button:hover:not(:disabled) {
-  background: #45a049;
+  background: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
 }
 
 .submit-button:disabled,
@@ -145,6 +293,21 @@
   .submit-button,
   .cancel-button {
     width: 100%;
+  }
+
+  .location-buttons-container {
+    flex-direction: column;
+  }
+
+  .location-selected {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .location-change-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

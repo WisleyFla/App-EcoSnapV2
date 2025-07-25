@@ -1,0 +1,395 @@
+/* src/components/posts/EditPostModal.css */
+
+.edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.edit-modal-container {
+  background: #1a1a1a;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.edit-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #333;
+}
+
+.edit-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #ffffff;
+}
+
+.edit-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.edit-modal-form {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.edit-form-group {
+  margin-bottom: 24px;
+}
+
+.edit-form-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.edit-content-textarea {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #333;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #2a2a2a;
+  color: #ffffff;
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.edit-content-textarea:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.edit-content-textarea::placeholder {
+  color: #666;
+}
+
+.edit-character-count {
+  text-align: right;
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Estilos para Mídia */
+.edit-media-section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+
+.edit-existing-media,
+.edit-new-media {
+  margin-bottom: 16px;
+}
+
+.edit-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.edit-media-item {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #2a2a2a;
+  border: 2px solid #333;
+}
+
+.edit-media-preview {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+
+.edit-media-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 71, 87, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-media-delete-btn:hover {
+  background: rgba(255, 71, 87, 1);
+  transform: scale(1.1);
+}
+
+.edit-media-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.edit-media-btn {
+  flex: 1;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-media-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.edit-media-btn.secondary {
+  background: #4a9eff;
+}
+
+.edit-media-btn.secondary:hover:not(:disabled) {
+  background: #3b82f6;
+}
+
+.edit-media-btn:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Estilos para Localização */
+.edit-location-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.edit-location-btn {
+  flex: 1;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.edit-location-btn.map {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.edit-location-btn.map:hover {
+  background: #059669;
+}
+
+.edit-location-btn.gps {
+  background: #4a9eff;
+  color: #ffffff;
+}
+
+.edit-location-btn.gps:hover {
+  background: #3b82f6;
+}
+
+.edit-location-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #2a2a2a;
+  border: 2px solid #333;
+  border-radius: 12px;
+}
+
+.edit-location-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  flex: 1;
+}
+
+.edit-location-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ff4757;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-location-remove:hover {
+  background-color: rgba(255, 71, 87, 0.1);
+}
+
+/* Tags */
+.edit-tags-input {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #333;
+  border-radius: 12px;
+  font-size: 14px;
+  background: #2a2a2a;
+  color: #ffffff;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.edit-tags-input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.edit-tags-input::placeholder {
+  color: #666;
+}
+
+/* Footer */
+.edit-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #333;
+  margin-top: auto;
+}
+
+.edit-cancel-btn,
+.edit-submit-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.edit-cancel-btn {
+  background: #333;
+  color: #ffffff;
+}
+
+.edit-cancel-btn:hover:not(:disabled) {
+  background: #444;
+}
+
+.edit-submit-btn {
+  background: #4a9eff;
+  color: #ffffff;
+}
+
+.edit-submit-btn:hover:not(:disabled) {
+  background: #3b82f6;
+}
+
+.edit-submit-btn:disabled,
+.edit-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .edit-modal-container {
+    max-width: calc(100vw - 32px);
+  }
+
+  .edit-media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+
+  .edit-media-preview {
+    height: 100px;
+  }
+
+  .edit-media-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .edit-modal-container {
+    max-width: calc(100vw - 16px);
+    margin: 8px;
+  }
+
+  .edit-modal-header {
+    padding: 16px 20px;
+  }
+
+  .edit-modal-form {
+    padding: 20px;
+  }
+
+  .edit-modal-footer {
+    padding: 16px 20px;
+    flex-direction: column;
+  }
+
+  .edit-location-buttons {
+    flex-direction: column;
+  }
+
+  .edit-form-group {
+    margin-bottom: 20px;
+  }
+
+  .edit-media-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
