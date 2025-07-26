@@ -91,7 +91,7 @@ EcoSnap/
 🚀 Tecnologias Utilizadas
 Este projeto foi construído utilizando um stack de tecnologias web modernas, empacotado para mobile com Capacitor:
 
-[Framework Principal]: (Ex: React, Vue, Angular ou JavaScript puro)
+[Framework Principal]: React+Vite, CSS, JavaScript
 
 Capacitor: Para transformar o código web em um aplicativo nativo para Android.
 
